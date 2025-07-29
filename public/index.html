@@ -40,11 +40,46 @@
             <button id="guest-mode-btn">وضع الضيف</button>
         </section>
 
-        <section id="dashboard-section" class="page" style="display: none;">
+      <section id="dashboard-section" class="page" style="display: none;">
             <h2>لوحة التحكم</h2>
-            <p>أهلاً بك في لوحة التحكم!</p>
-        </section>
+            <div class="summary-cards">
+                <div class="card income-card">
+                    <h3>إجمالي الإيرادات</h3>
+                    <p id="total-income">0.00</p>
+                </div>
+                <div class="card expense-card">
+                    <h3>إجمالي المصاريف</h3>
+                    <p id="total-expense">0.00</p>
+                </div>
+                <div class="card balance-card">
+                    <h3>صافي الرصيد</h3>
+                    <p id="current-balance">0.00</p>
+                </div>
+            </div>
 
+            <div class="latest-transactions">
+                <h3>أحدث المعاملات</h3>
+                <table id="latest-transactions-table">
+                    <thead>
+                        <tr>
+                            <th>النوع</th>
+                            <th>المبلغ</th>
+                            <th>العملة</th>
+                            <th>الفئة</th>
+                            <th>المصدر (للإيرادات)</th>
+                            <th>التاريخ</th>
+                            <th>الوصف</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="7" style="text-align: center;">لا توجد معاملات لعرضها.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="charts-container">
+                </div>
+        </section>
         <section id="transactions-section" class="page" style="display: none;">
             <h2>إدارة المعاملات</h2>
             <p>هنا يمكنك إدارة إيراداتك ومصاريفك.</p>
