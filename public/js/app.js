@@ -5,7 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-// Firebase Configuration - (هذه هي الإعدادات الخاصة بمشروعك)
+// Firebase Configuration - (This is your specific project configuration)
 const firebaseConfig = {
   apiKey: "AIzaSyC-pZm-mV7fvfMFVEqOq1s5vnoVHQ4Olc4",
   authDomain: "money-969a6.firebaseapp.com",
@@ -21,8 +21,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ==========================================================
-// 1. تعريف العناصر (DOM Elements)
+// 1. Define DOM Elements
 // ==========================================================
+// Authentication Section Elements
 const authSection = document.getElementById('auth-section');
 const authForm = document.getElementById('auth-form');
 const authEmail = document.getElementById('auth-email');
@@ -32,7 +33,7 @@ const registerBtn = document.getElementById('register-btn');
 const authErrorMessage = document.getElementById('auth-error-message');
 const guestModeBtn = document.getElementById('guest-mode-btn');
 
-// أزرار التنقل (Header Navigation Buttons)
+// Header Navigation Buttons
 const authNavBtn = document.getElementById('auth-btn');
 const dashboardNav = document.getElementById('dashboard-nav');
 const transactionsNav = document.getElementById('transactions-nav');
@@ -44,16 +45,16 @@ const reportsNav = document.getElementById('reports-nav');
 const settingsNav = document.getElementById('settings-nav');
 const logoutBtn = document.getElementById('logout-btn');
 
-// أقسام المحتوى (Content Sections)
-const allPages = document.querySelectorAll('.page'); // يحدد جميع الأقسام التي تحتوي على الكلاس 'page'
+// Content Sections (All pages)
+const allPages = document.querySelectorAll('.page');
 
-// عناصر لوحة التحكم
+// Dashboard Section Elements
 const totalIncomeEl = document.getElementById('total-income');
 const totalExpenseEl = document.getElementById('total-expense');
 const currentBalanceEl = document.getElementById('current-balance');
 const latestTransactionsTableBody = document.querySelector('#latest-transactions-table tbody');
 
-// عناصر قسم المعاملات
+// Transactions Section Elements
 const transactionForm = document.getElementById('transaction-form');
 const transactionTypeSelect = document.getElementById('transaction-type');
 const transactionAmountInput = document.getElementById('transaction-amount');
@@ -73,7 +74,7 @@ const filterTypeSelect = document.getElementById('filter-type');
 const sortBySelect = document.getElementById('sort-by');
 const searchTransactionsInput = document.getElementById('search-transactions');
 
-// عناصر قسم الفئات ومصادر الدخل
+// Categories & Income Sources Section Elements
 const categorySourceForm = document.getElementById('category-source-form');
 const itemTypeSelect = document.getElementById('item-type');
 const itemNameInput = document.getElementById('item-name');
@@ -83,22 +84,31 @@ const categorySourceMessage = document.getElementById('category-source-message')
 const expenseCategoriesTableBody = document.querySelector('#expense-categories-table tbody');
 const incomeSourcesTableBody = document.querySelector('#income-sources-table tbody');
 
+// Budgets Section Elements
+const budgetForm = document.getElementById('budget-form');
+const budgetCategorySelect = document.getElementById('budget-category');
+const budgetAmountInput = document.getElementById('budget-amount');
+const budgetMonthInput = document.getElementById('budget-month');
+const addBudgetBtn = document.getElementById('add-budget-btn');
+const budgetMessage = document.getElementById('budget-message');
+const allBudgetsTableBody = document.querySelector('#all-budgets-table tbody');
+
 
 // ==========================================================
-// 2. وظائف واجهة المستخدم (UI Functions)
+// 2. UI Utility Functions
 // ==========================================================
 
-// وظيفة لعرض قسم معين وإخفاء البقية
+// Function to show a specific page and hide others
 const showPage = (pageId) => {
     allPages.forEach(page => {
-        page.style.display = 'none'; // إخفاء جميع الصفحات
+        page.style.display = 'none'; // Hide all pages
     });
-    document.getElementById(pageId).style.display = 'block'; // عرض الصفحة المطلوبة
+    document.getElementById(pageId).style.display = 'block'; // Show the requested page
 };
 
-// وظيفة لتحديث أزرار التنقل بناءً على حالة المصادقة
+// Function to update navigation buttons based on authentication state
 const updateNavForAuthState = (user) => {
-    if (user) { // المستخدم مسجل دخول
+    if (user) { // User is logged in
         authNavBtn.style.display = 'none';
         dashboardNav.style.display = 'inline-block';
         transactionsNav.style.display = 'inline-block';
@@ -109,8 +119,8 @@ const updateNavForAuthState = (user) => {
         reportsNav.style.display = 'inline-block';
         settingsNav.style.display = 'inline-block';
         logoutBtn.style.display = 'inline-block';
-        showPage('dashboard-section'); // عرض لوحة التحكم تلقائيًا
-    } else { // المستخدم غير مسجل دخول
+        showPage('dashboard-section'); // Automatically show dashboard
+    } else { // User is logged out
         authNavBtn.style.display = 'inline-block';
         dashboardNav.style.display = 'none';
         transactionsNav.style.display = 'none';
@@ -121,11 +131,11 @@ const updateNavForAuthState = (user) => {
         reportsNav.style.display = 'none';
         settingsNav.style.display = 'none';
         logoutBtn.style.display = 'none';
-        showPage('auth-section'); // عرض صفحة المصادقة
+        showPage('auth-section'); // Show authentication page
     }
 };
 
-// وظيفة لعرض رسائل النجاح/الخطأ في نموذج المعاملات
+// Function to display success/error messages for transaction form
 const displayTransactionMessage = (message, isError = false) => {
     const targetElement = isError ? transactionErrorMessage : transactionSuccessMessage;
     const otherElement = isError ? transactionSuccessMessage : transactionErrorMessage;
@@ -137,10 +147,10 @@ const displayTransactionMessage = (message, isError = false) => {
     setTimeout(() => {
         targetElement.textContent = '';
         targetElement.style.display = 'none';
-    }, 5000); // إخفاء الرسالة بعد 5 ثوانٍ
+    }, 5000); // Hide message after 5 seconds
 };
 
-// وظيفة لتبديل حقول الفئة/المصدر بناءً على نوع المعاملة
+// Function to toggle category/income source fields based on transaction type
 const toggleCategoryIncomeSourceFields = () => {
     if (transactionTypeSelect.value === 'expense') {
         categoryGroup.style.display = 'block';
@@ -155,7 +165,7 @@ const toggleCategoryIncomeSourceFields = () => {
     }
 };
 
-// وظيفة لعرض رسائل النجاح/الخطأ في نموذج الفئات/المصادر
+// Function to display success/error messages for category/source form
 const displayCategorySourceMessage = (message, isError = false) => {
     categorySourceMessage.textContent = message;
     categorySourceMessage.className = isError ? 'error-message' : 'success-message';
@@ -164,25 +174,37 @@ const displayCategorySourceMessage = (message, isError = false) => {
     setTimeout(() => {
         categorySourceMessage.textContent = '';
         categorySourceMessage.style.display = 'none';
-    }, 5000); // إخفاء الرسالة بعد 5 ثوانٍ
+    }, 5000); // Hide message after 5 seconds
+};
+
+// Function to display success/error messages for budget form
+const displayBudgetMessage = (message, isError = false) => {
+    budgetMessage.textContent = message;
+    budgetMessage.className = isError ? 'error-message' : 'success-message';
+    budgetMessage.style.display = 'block';
+
+    setTimeout(() => {
+        budgetMessage.textContent = '';
+        budgetMessage.style.display = 'none';
+    }, 5000);
 };
 
 
 // ==========================================================
-// 3. وظائف المصادقة (Authentication Functions)
+// 3. Authentication Functions
 // ==========================================================
 
-// معالجة تسجيل الدخول
+// Handle user login
 const handleLogin = async (e) => {
-    e.preventDefault(); // منع إعادة تحميل الصفحة
+    e.preventDefault(); // Prevent page reload
     const email = authEmail.value;
     const password = authPassword.value;
-    authErrorMessage.textContent = ''; // مسح أي رسائل خطأ سابقة
+    authErrorMessage.textContent = ''; // Clear previous error messages
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        // Firebase onAuthStateChanged سيقوم بالتعامل مع تحديث الواجهة
-        authEmail.value = ''; // مسح حقول الإدخال
+        // Firebase onAuthStateChanged will handle UI update
+        authEmail.value = ''; // Clear input fields
         authPassword.value = '';
     } catch (error) {
         let message = "حدث خطأ أثناء تسجيل الدخول. يرجى التحقق من بريدك الإلكتروني وكلمة المرور.";
@@ -198,12 +220,12 @@ const handleLogin = async (e) => {
     }
 };
 
-// معالجة إنشاء حساب جديد
+// Handle new user registration
 const handleRegister = async (e) => {
-    e.preventDefault(); // منع إعادة تحميل الصفحة
+    e.preventDefault(); // Prevent page reload
     const email = authEmail.value;
     const password = authPassword.value;
-    authErrorMessage.textContent = ''; // مسح أي رسائل خطأ سابقة
+    authErrorMessage.textContent = ''; // Clear previous error messages
 
     if (password.length < 6) {
         authErrorMessage.textContent = "يجب أن تكون كلمة المرور 6 أحرف على الأقل.";
@@ -212,9 +234,8 @@ const handleRegister = async (e) => {
 
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Firebase onAuthStateChanged سيقوم بالتعامل مع تحديث الواجهة
-        // يمكننا هنا إضافة بيانات المستخدم الأولية إلى Firestore
-        // مصادر الدخل الافتراضية
+        // Firebase onAuthStateChanged will handle UI update
+        // Add default income sources and expense categories for the new user
         await addDoc(collection(db, `users/${userCredential.user.uid}/incomeSources`), {
             name: "راتب",
             isDefault: true
@@ -228,7 +249,7 @@ const handleRegister = async (e) => {
             isDefault: true
         });
 
-        // فئات المصاريف الافتراضية
+        // Default expense categories
         await addDoc(collection(db, `users/${userCredential.user.uid}/expenseCategories`), {
             name: "طعام وشراب",
             isDefault: true
@@ -262,9 +283,9 @@ const handleRegister = async (e) => {
             isDefault: true
         });
 
-        authEmail.value = ''; // مسح حقول الإدخال
+        authEmail.value = ''; // Clear input fields
         authPassword.value = '';
-        authErrorMessage.textContent = "تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول."; // رسالة تأكيد للمستخدم
+        authErrorMessage.textContent = "تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول."; // Success message
     } catch (error) {
         let message = "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.";
         if (error.code === 'auth/email-already-in-use') {
@@ -279,41 +300,40 @@ const handleRegister = async (e) => {
     }
 };
 
-// معالجة تسجيل الخروج
+// Handle user logout
 const handleLogout = async () => {
     try {
         await signOut(auth);
-        // Firebase onAuthStateChanged سيقوم بالتعامل مع تحديث الواجهة
+        // Firebase onAuthStateChanged will handle UI update
     } catch (error) {
         console.error("Logout Error:", error.message);
     }
 };
 
 // ==========================================================
-// 4. وضع الضيف (Guest Mode) - لا يتطلب تسجيل دخول حقيقي
+// 4. Guest Mode
 // ==========================================================
 const enterGuestMode = () => {
-    // سنستخدم معرف مستخدم ثابت لوضع الضيف للوصول إلى بيانات تجريبية
-    // ملاحظة: في تطبيق حقيقي، يجب أن تكون بيانات الضيف للقراءة فقط
-    // أو تتم إعادة تعيينها بعد كل جلسة
-    const guestUserId = "guest_user_demo"; // معرف مستخدم ثابت
-    // لا يوجد تغيير في حالة المصادقة في Firebase، بل نغير الواجهة فقط
-    updateNavForAuthState({ uid: guestUserId, isGuest: true }); // نمرر كائن مستخدم وهمي
+    // We'll use a fixed guest user ID to access demo data
+    // Note: In a real app, guest data should be read-only or reset after each session
+    const guestUserId = "guest_user_demo"; // Fixed user ID for guest mode
+    // No change in Firebase authentication state, we just change the UI
+    updateNavForAuthState({ uid: guestUserId, isGuest: true }); // Pass a dummy user object
     authErrorMessage.textContent = "أنت الآن في وضع الضيف. لن يتم حفظ بياناتك.";
-    // هنا يمكنك استدعاء وظيفة لتحميل بيانات تجريبية لوضع الضيف
-    // loadGuestDashboardData(); // ستنشئ هذه الوظيفة لاحقا
+    // You can call a function here to load static demo data for guest mode
+    // loadGuestDashboardData(); // Will be created later if needed
 };
 
 
 // ==========================================================
-// 5. وظائف جلب وعرض البيانات (Data Fetching & Rendering)
+// 5. Data Fetching & Rendering Functions
 // ==========================================================
 
-// وظيفة لجلب أحدث المعاملات (الإيرادات والمصاريف) من Firestore
+// Function to fetch latest transactions (income and expense) from Firestore
 const getLatestTransactions = async (userId) => {
     try {
         const transactionsRef = collection(db, `users/${userId}/transactions`);
-        const q = query(transactionsRef, orderBy('date', 'desc'), limit(5)); // جلب أحدث 5 معاملات
+        const q = query(transactionsRef, orderBy('date', 'desc'), limit(5)); // Fetch latest 5 transactions
         const querySnapshot = await getDocs(q);
         const transactions = [];
         querySnapshot.forEach((doc) => {
@@ -326,7 +346,7 @@ const getLatestTransactions = async (userId) => {
     }
 };
 
-// وظيفة لجلب جميع الإيرادات والمصاريف لحساب الإجماليات
+// Function to fetch all transactions (income and expense) for calculations
 const getAllTransactions = async (userId) => {
     try {
         const transactionsRef = collection(db, `users/${userId}/transactions`);
@@ -342,9 +362,9 @@ const getAllTransactions = async (userId) => {
     }
 };
 
-// وظيفة لعرض أحدث المعاملات في الجدول
+// Function to render latest transactions in the dashboard table
 const renderLatestTransactions = (transactions) => {
-    latestTransactionsTableBody.innerHTML = ''; // مسح المحتوى الحالي
+    latestTransactionsTableBody.innerHTML = ''; // Clear current content
     if (transactions.length === 0) {
         latestTransactionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد معاملات لعرضها.</td></tr>';
         return;
@@ -368,16 +388,16 @@ const renderLatestTransactions = (transactions) => {
     });
 };
 
-// وظيفة لحساب وعرض الإجماليات في بطاقات الملخص
+// Function to calculate and render totals in summary cards
 const calculateAndRenderSummary = (transactions) => {
     let totalIncome = 0;
     let totalExpense = 0;
 
-    // بما أننا لا نتعامل مع تحويل العملات، سنفترض عملة واحدة الآن (JOD افتراضياً)
-    // لاحقاً يمكننا إضافة منطق للتعامل مع عملات متعددة بعرضها منفصلة أو تحويلها تقديرياً
+    // Since we are not dealing with currency conversion, we assume one currency for now (JOD by default)
+    // Later, we can add logic to handle multiple currencies by displaying them separately or estimating conversion
     transactions.forEach(transaction => {
-        // إذا كان هناك عملات متعددة، يمكنك تعديل هذا هنا لفلترة أو جمع حسب العملة
-        // حالياً نفترض جميع المعاملات بنفس العملة الافتراضية
+        // If there are multiple currencies, you can modify this here to filter or sum by currency
+        // Currently, we assume all transactions are in the same default currency
         if (transaction.type === 'income') {
             totalIncome += transaction.amount || 0;
         } else if (transaction.type === 'expense') {
@@ -387,23 +407,23 @@ const calculateAndRenderSummary = (transactions) => {
 
     const currentBalance = totalIncome - totalExpense;
 
-    totalIncomeEl.textContent = `${totalIncome.toFixed(2)} JOD`; // نفترض JOD كعملة افتراضية
+    totalIncomeEl.textContent = `${totalIncome.toFixed(2)} JOD`; // Assume JOD as default currency
     totalExpenseEl.textContent = `${totalExpense.toFixed(2)} JOD`;
     currentBalanceEl.textContent = `${currentBalance.toFixed(2)} JOD`;
 
-    // تغيير لون الرصيد بناءً على القيمة
+    // Change balance color based on value
     if (currentBalance < 0) {
-        currentBalanceEl.style.color = '#dc3545'; // أحمر
+        currentBalanceEl.style.color = '#dc3545'; // Red
     } else {
-        currentBalanceEl.style.color = '#007bff'; // أزرق (نفس اللون الافتراضي)
+        currentBalanceEl.style.color = '#007bff'; // Blue (default color)
     }
 };
 
-// وظيفة رئيسية لتحميل بيانات لوحة التحكم
+// Main function to load dashboard data
 const loadDashboardData = async (userId) => {
     if (!userId || userId === "guest_user_demo") {
-        // في وضع الضيف أو بدون مستخدم، لا نجلب بيانات حقيقية
-        // يمكن هنا تحميل بيانات تجريبية ثابتة لوضع الضيف
+        // For guest mode or no user, we don't fetch real data
+        // Here you can load static demo data for guest mode
         totalIncomeEl.textContent = '0.00 JOD';
         totalExpenseEl.textContent = '0.00 JOD';
         currentBalanceEl.textContent = '0.00 JOD';
@@ -411,16 +431,16 @@ const loadDashboardData = async (userId) => {
         return;
     }
 
-    // جلب أحدث 5 معاملات للعرض المباشر
+    // Fetch latest 5 transactions for direct display
     const latest = await getLatestTransactions(userId);
     renderLatestTransactions(latest);
 
-    // جلب جميع المعاملات لحساب الإجماليات
+    // Fetch all transactions for totals calculation
     const all = await getAllTransactions(userId);
     calculateAndRenderSummary(all);
 };
 
-// وظيفة لجلب فئات المصاريف
+// Function to fetch expense categories
 const getExpenseCategories = async (userId) => {
     try {
         const categoriesRef = collection(db, `users/${userId}/expenseCategories`);
@@ -436,7 +456,7 @@ const getExpenseCategories = async (userId) => {
     }
 };
 
-// وظيفة لجلب مصادر الدخل
+// Function to fetch income sources
 const getIncomeSources = async (userId) => {
     try {
         const sourcesRef = collection(db, `users/${userId}/incomeSources`);
@@ -452,7 +472,7 @@ const getIncomeSources = async (userId) => {
     }
 };
 
-// وظيفة لملء قائمتي الفئات ومصادر الدخل في النموذج
+// Function to populate category and income source dropdowns in the transaction form
 const populateCategoryAndSourceSelects = async (userId) => {
     if (!userId || userId === "guest_user_demo") {
         transactionCategorySelect.innerHTML = '<option value="">لا يوجد فئات (وضع الضيف)</option>';
@@ -480,7 +500,7 @@ const populateCategoryAndSourceSelects = async (userId) => {
     });
 };
 
-// وظيفة لإضافة معاملة جديدة
+// Function to add a new transaction
 const addTransaction = async (e) => {
     e.preventDefault();
     const userId = auth.currentUser ? auth.currentUser.uid : null;
@@ -528,9 +548,9 @@ const addTransaction = async (e) => {
             type,
             amount,
             currency,
-            date: date, // حفظ التاريخ كنص ISO لتسهيل الفرز وعرضه
+            date: date, // Save date as ISO string for easy sorting and display
             description,
-            createdAt: new Date().toISOString() // وقت الإنشاء
+            createdAt: new Date().toISOString() // Creation timestamp
         };
 
         if (type === 'expense') {
@@ -541,41 +561,41 @@ const addTransaction = async (e) => {
 
         await addDoc(collection(db, `users/${userId}/transactions`), transactionData);
         displayTransactionMessage("تمت إضافة المعاملة بنجاح!");
-        transactionForm.reset(); // إعادة تعيين النموذج
-        // إعادة تحميل بيانات لوحة التحكم والمعاملات لتحديث الواجهة
+        transactionForm.reset(); // Reset the form
+        // Reload dashboard and transactions data to update UI
         loadDashboardData(userId);
         loadAllTransactions(userId);
-        // تعيين التاريخ الافتراضي لليوم الحالي مرة أخرى بعد الإضافة
+        // Set default date to current date again after adding
         transactionDateInput.valueAsDate = new Date();
-        toggleCategoryIncomeSourceFields(); // إعادة ضبط حقول الفئة/المصدر بعد إعادة التعيين
+        toggleCategoryIncomeSourceFields(); // Reset category/source fields after reset
     } catch (error) {
         console.error("Error adding transaction:", error);
         displayTransactionMessage("فشل في إضافة المعاملة: " + error.message, true);
     }
 };
 
-// وظيفة لجلب وعرض جميع المعاملات في جدول "جميع المعاملات"
+// Function to fetch and render all transactions in the "All Transactions" table
 const loadAllTransactions = async (userId) => {
-    allTransactionsTableBody.innerHTML = ''; // مسح المحتوى الحالي
+    allTransactionsTableBody.innerHTML = ''; // Clear current content
 
     if (!userId || userId === "guest_user_demo") {
         allTransactionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد بيانات متاحة في وضع الضيف أو بدون تسجيل دخول.</td></tr>';
         return;
     }
 
-    let transactions = await getAllTransactions(userId); // استخدم وظيفة getAllTransactions الموجودة
+    let transactions = await getAllTransactions(userId); // Use existing getAllTransactions function
     
-    // تطبيق الفلاتر والفرز
+    // Apply filters and sorting
     const filterType = filterTypeSelect.value;
     const sortBy = sortBySelect.value;
     const searchTerm = searchTransactionsInput.value.toLowerCase().trim();
 
-    // فلترة
+    // Filter
     if (filterType !== 'all') {
         transactions = transactions.filter(t => t.type === filterType);
     }
 
-    // بحث
+    // Search
     if (searchTerm) {
         transactions = transactions.filter(t => 
             (t.description && t.description.toLowerCase().includes(searchTerm)) ||
@@ -584,7 +604,7 @@ const loadAllTransactions = async (userId) => {
         );
     }
 
-    // فرز
+    // Sort
     transactions.sort((a, b) => {
         if (sortBy === 'date-desc') {
             return new Date(b.date) - new Date(a.date);
@@ -624,17 +644,18 @@ const loadAllTransactions = async (userId) => {
         allTransactionsTableBody.appendChild(row);
     });
 
-    // إضافة مستمعي الأحداث لأزرار الحذف والتعديل بعد إنشاء الصفوف
+    // Add event listeners for delete and edit buttons after rows are created
     document.querySelectorAll('.delete-btn').forEach(button => {
         button.addEventListener('click', (e) => handleDeleteTransaction(e.currentTarget.dataset.id));
     });
-    // buttons.forEach(button => {
+    // For edit functionality, you would add a similar listener:
+    // document.querySelectorAll('.edit-btn').forEach(button => {
     //     button.addEventListener('click', (e) => handleEditTransaction(e.currentTarget.dataset.id));
     // });
-    // حالياً لا يوجد دالة لـ handleEditTransaction
+    // Currently, `handleEditTransaction` function is not implemented
 };
 
-// وظيفة لحذف معاملة
+// Function to delete a transaction
 const handleDeleteTransaction = async (transactionId) => {
     const userId = auth.currentUser ? auth.currentUser.uid : null;
     if (!userId || userId === "guest_user_demo") {
@@ -646,8 +667,8 @@ const handleDeleteTransaction = async (transactionId) => {
         try {
             await deleteDoc(doc(db, `users/${userId}/transactions`, transactionId));
             displayTransactionMessage("تم حذف المعاملة بنجاح!");
-            loadDashboardData(userId); // تحديث لوحة التحكم
-            loadAllTransactions(userId); // تحديث قائمة المعاملات
+            loadDashboardData(userId); // Update dashboard
+            loadAllTransactions(userId); // Update transactions list
         } catch (error) {
             console.error("Error deleting transaction:", error);
             displayTransactionMessage("فشل في حذف المعاملة: " + error.message, true);
@@ -655,7 +676,7 @@ const handleDeleteTransaction = async (transactionId) => {
     }
 };
 
-// وظيفة لعرض فئات المصاريف في الجدول الخاص بها
+// Function to render expense categories in their table
 const renderExpenseCategories = (categories) => {
     expenseCategoriesTableBody.innerHTML = '';
     if (categories.length === 0) {
@@ -677,7 +698,7 @@ const renderExpenseCategories = (categories) => {
     });
 };
 
-// وظيفة لعرض مصادر الدخل في الجدول الخاص بها
+// Function to render income sources in their table
 const renderIncomeSources = (sources) => {
     incomeSourcesTableBody.innerHTML = '';
     if (sources.length === 0) {
@@ -699,11 +720,11 @@ const renderIncomeSources = (sources) => {
     });
 };
 
-// وظيفة رئيسية لتحميل وعرض الفئات والمصادر
+// Main function to load and render categories and income sources
 const loadCategoriesAndSources = async (userId) => {
     if (!userId || userId === "guest_user_demo") {
-        renderExpenseCategories([]); // عرض فارغ لوضع الضيف
-        renderIncomeSources([]);    // عرض فارغ لوضع الضيف
+        renderExpenseCategories([]); // Render empty for guest mode
+        renderIncomeSources([]);    // Render empty for guest mode
         return;
     }
     const categories = await getExpenseCategories(userId);
@@ -712,7 +733,7 @@ const loadCategoriesAndSources = async (userId) => {
     renderIncomeSources(sources);
 };
 
-// وظيفة لإضافة فئة أو مصدر جديد
+// Function to add a new category or income source
 const addCategoryOrSource = async (e) => {
     e.preventDefault();
     const userId = auth.currentUser ? auth.currentUser.uid : null;
@@ -745,16 +766,16 @@ const addCategoryOrSource = async (e) => {
         await addDoc(collection(db, collectionPath), { name: name });
         displayCategorySourceMessage("تمت الإضافة بنجاح!");
         categorySourceForm.reset();
-        loadCategoriesAndSources(userId); // إعادة تحميل الجداول
-        populateCategoryAndSourceSelects(userId); // تحديث قوائم المعاملات
-        loadAllTransactions(userId); // تحديث جدول المعاملات
+        loadCategoriesAndSources(userId); // Reload tables
+        populateCategoryAndSourceSelects(userId); // Update transaction form dropdowns
+        loadAllTransactions(userId); // Update all transactions table
     } catch (error) {
         console.error("Error adding category/source:", error);
         displayCategorySourceMessage("فشل في الإضافة: " + error.message, true);
     }
 };
 
-// وظيفة لحذف فئة مصروف
+// Function to delete an expense category
 const handleDeleteCategory = async (categoryId) => {
     const userId = auth.currentUser ? auth.currentUser.uid : null;
     if (!userId || userId === "guest_user_demo") {
@@ -764,11 +785,12 @@ const handleDeleteCategory = async (categoryId) => {
 
     if (confirm("هل أنت متأكد من حذف هذه الفئة؟ سيتم حذف جميع المعاملات المرتبطة بها! (ميزة سيتم تطويرها لاحقاً، حالياً ستحذف الفئة فقط.)")) {
         try {
+            // TODO: Implement logic to update/delete associated transactions
             await deleteDoc(doc(db, `users/${userId}/expenseCategories`, categoryId));
             displayCategorySourceMessage("تم حذف الفئة بنجاح!");
-            loadCategoriesAndSources(userId); // تحديث الجداول
-            populateCategoryAndSourceSelects(userId); // تحديث قوائم المعاملات
-            loadAllTransactions(userId); // تحديث جدول المعاملات
+            loadCategoriesAndSources(userId); // Update tables
+            populateCategoryAndSourceSelects(userId); // Update transaction form dropdowns
+            loadAllTransactions(userId); // Update all transactions table
         } catch (error) {
             console.error("Error deleting category:", error);
             displayCategorySourceMessage("فشل في حذف الفئة: " + error.message, true);
@@ -776,7 +798,7 @@ const handleDeleteCategory = async (categoryId) => {
     }
 };
 
-// وظيفة لحذف مصدر دخل
+// Function to delete an income source
 const handleDeleteSource = async (sourceId) => {
     const userId = auth.currentUser ? auth.currentUser.uid : null;
     if (!userId || userId === "guest_user_demo") {
@@ -786,11 +808,12 @@ const handleDeleteSource = async (sourceId) => {
 
     if (confirm("هل أنت متأكد من حذف هذا المصدر؟ سيتم حذف جميع المعاملات المرتبطة به! (ميزة سيتم تطويرها لاحقاً، حالياً ستحذف المصدر فقط.)")) {
         try {
+            // TODO: Implement logic to update/delete associated transactions
             await deleteDoc(doc(db, `users/${userId}/incomeSources`, sourceId));
             displayCategorySourceMessage("تم حذف المصدر بنجاح!");
-            loadCategoriesAndSources(userId); // تحديث الجداول
-            populateCategoryAndSourceSelects(userId); // تحديث قوائم المعاملات
-            loadAllTransactions(userId); // تحديث جدول المعاملات
+            loadCategoriesAndSources(userId); // Update tables
+            populateCategoryAndSourceSelects(userId); // Update transaction form dropdowns
+            loadAllTransactions(userId); // Update all transactions table
         } catch (error) {
             console.error("Error deleting source:", error);
             displayCategorySourceMessage("فشل في حذف المصدر: " + error.message, true);
@@ -798,92 +821,298 @@ const handleDeleteSource = async (sourceId) => {
     }
 };
 
+// Function to populate expense categories in the budget form dropdown
+const populateBudgetCategorySelect = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        budgetCategorySelect.innerHTML = '<option value="">لا يوجد فئات (وضع الضيف)</option>';
+        return;
+    }
+    const categories = await getExpenseCategories(userId); // Use the same function to fetch expense categories
+    budgetCategorySelect.innerHTML = '<option value="">اختر فئة</option>';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.name;
+        option.textContent = cat.name;
+        budgetCategorySelect.appendChild(option);
+    });
+};
+
+// Function to fetch budgets
+const getBudgets = async (userId) => {
+    try {
+        const budgetsRef = collection(db, `users/${userId}/budgets`);
+        const q = query(budgetsRef, orderBy('month', 'desc')); // Fetch latest budgets first
+        const querySnapshot = await getDocs(q);
+        const budgets = [];
+        querySnapshot.forEach((doc) => {
+            budgets.push({ id: doc.id, ...doc.data() });
+        });
+        return budgets;
+    } catch (error) {
+        console.error("Error fetching budgets:", error);
+        return [];
+    }
+};
+
+// Function to calculate spent amount for a specific category in a given month
+const getSpentAmountForBudget = async (userId, categoryName, yearMonth) => {
+    try {
+        const [year, month] = yearMonth.split('-'); // month will be 01-12
+        const transactionsRef = collection(db, `users/${userId}/transactions`);
+        
+        // Fetch transactions for that category and month
+        const q = query(
+            transactionsRef,
+            where('type', '==', 'expense'),
+            where('category', '==', categoryName),
+            // Filter date within the specified month
+            where('date', '>=', `${year}-${month}-01`),
+            where('date', '<=', `${year}-${month}-31`) // This needs improvement for months with 30 days or February
+            // Can use Date objects for more accurate date range filtering
+        );
+        const querySnapshot = await getDocs(q);
+        let spentAmount = 0;
+        querySnapshot.forEach(doc => {
+            spentAmount += doc.data().amount || 0;
+        });
+        return spentAmount;
+    } catch (error) {
+        console.error("Error calculating spent amount for budget:", error);
+        return 0;
+    }
+};
+
+// Function to render budgets in the table
+const renderBudgets = async (userId, budgets) => {
+    allBudgetsTableBody.innerHTML = '';
+    if (budgets.length === 0) {
+        allBudgetsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد ميزانيات لعرضها.</td></tr>';
+        return;
+    }
+
+    for (const budget of budgets) {
+        const spentAmount = await getSpentAmountForBudget(userId, budget.category, budget.month);
+        const remainingAmount = budget.targetAmount - spentAmount;
+        const percentage = (spentAmount / budget.targetAmount) * 100;
+
+        let progressBarClass = 'green';
+        if (percentage >= 100) {
+            progressBarClass = 'red';
+        } else if (percentage >= 75) {
+            progressBarClass = 'yellow';
+        }
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${budget.category}</td>
+            <td>${budget.targetAmount ? budget.targetAmount.toFixed(2) : '0.00'} JOD</td>
+            <td>${spentAmount.toFixed(2)} JOD</td>
+            <td style="color: ${remainingAmount < 0 ? '#dc3545' : ''};">${remainingAmount.toFixed(2)} JOD</td>
+            <td>
+                <div class="progress-bar-container">
+                    <div class="progress-bar ${progressBarClass}" style="width: ${Math.min(100, percentage)}%;">
+                        ${percentage.toFixed(0)}%
+                    </div>
+                </div>
+            </td>
+            <td>${budget.month}</td>
+            <td class="action-buttons">
+                <button class="delete-budget-btn" data-id="${budget.id}"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        allBudgetsTableBody.appendChild(row);
+    }
+    document.querySelectorAll('.delete-budget-btn').forEach(button => {
+        button.addEventListener('click', (e) => handleDeleteBudget(e.currentTarget.dataset.id));
+    });
+};
+
+// Main function to load and render budgets
+const loadBudgets = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        allBudgetsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد بيانات متاحة في وضع الضيف أو بدون تسجيل دخول.</td></tr>';
+        return;
+    }
+    const budgets = await getBudgets(userId);
+    await renderBudgets(userId, budgets);
+};
+
+// Function to add a new budget
+const addBudget = async (e) => {
+    e.preventDefault();
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+    if (!userId) {
+        displayBudgetMessage("يجب تسجيل الدخول لإضافة ميزانية.", true);
+        return;
+    }
+    if (userId === "guest_user_demo") {
+        displayBudgetMessage("لا يمكن إضافة ميزانيات في وضع الضيف.", true);
+        return;
+    }
+
+    const category = budgetCategorySelect.value;
+    const targetAmount = parseFloat(budgetAmountInput.value);
+    const month = budgetMonthInput.value; // Will be in YYYY-MM format
+
+    if (!category) {
+        displayBudgetMessage("الفئة مطلوبة.", true);
+        return;
+    }
+    if (isNaN(targetAmount) || targetAmount <= 0) {
+        displayBudgetMessage("المبلغ المستهدف غير صالح.", true);
+        return;
+    }
+    if (!month) {
+        displayBudgetMessage("الشهر والسنة مطلوبان.", true);
+        return;
+    }
+
+    try {
+        // Check if a budget for this category and month already exists
+        const budgetsRef = collection(db, `users/${userId}/budgets`);
+        const q = query(budgetsRef, where('category', '==', category), where('month', '==', month));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            displayBudgetMessage("يوجد بالفعل ميزانية لهذه الفئة في هذا الشهر.", true);
+            return;
+        }
+
+        await addDoc(collection(db, `users/${userId}/budgets`), {
+            category: category,
+            targetAmount: targetAmount,
+            month: month // Save in YYYY-MM format
+        });
+        displayBudgetMessage("تمت إضافة الميزانية بنجاح!");
+        budgetForm.reset();
+        loadBudgets(userId); // Reload budget table
+        // Set default date to current month again after adding
+        budgetMonthInput.valueAsDate = new Date(); // Resets to current month
+    } catch (error) {
+        console.error("Error adding budget:", error);
+        displayBudgetMessage("فشل في إضافة الميزانية: " + error.message, true);
+    }
+};
+
+// Function to delete a budget
+const handleDeleteBudget = async (budgetId) => {
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+    if (!userId || userId === "guest_user_demo") {
+        displayBudgetMessage("لا يمكن حذف ميزانيات في وضع الضيف أو بدون تسجيل دخول.", true);
+        return;
+    }
+
+    if (confirm("هل أنت متأكد من حذف هذه الميزانية؟")) {
+        try {
+            await deleteDoc(doc(db, `users/${userId}/budgets`, budgetId));
+            displayBudgetMessage("تم حذف الميزانية بنجاح!");
+            loadBudgets(userId); // Update budget table
+        } catch (error) {
+            console.error("Error deleting budget:", error);
+            displayBudgetMessage("فشل في حذف الميزانية: " + error.message, true);
+        }
+    }
+};
+
 
 // ==========================================================
-// 6. إدارة حالة المصادقة (Auth State Listener)
+// 6. Authentication State Listener
 // ==========================================================
-// هذه الوظيفة تعمل تلقائيًا عند تغيير حالة المصادقة (تسجيل دخول/خروج)
+// This function runs automatically when authentication state changes (login/logout)
 onAuthStateChanged(auth, (user) => {
-    updateNavForAuthState(user); // تحديث الواجهة بناءً على المستخدم
+    updateNavForAuthState(user); // Update UI based on user state
     if (user) {
         console.log("User logged in:", user.uid);
-        loadDashboardData(user.uid); // تحميل بيانات لوحة التحكم
-        populateCategoryAndSourceSelects(user.uid); // تحميل الفئات ومصادر الدخل في نموذج المعاملات
-        loadAllTransactions(user.uid); // تحميل جميع المعاملات
-        loadCategoriesAndSources(user.uid); // تحميل الفئات والمصادر في صفحة إدارتها
+        loadDashboardData(user.uid); // Load dashboard data
+        populateCategoryAndSourceSelects(user.uid); // Load categories and income sources in transaction form
+        loadAllTransactions(user.uid); // Load all transactions
+        loadCategoriesAndSources(user.uid); // Load categories and income sources in their management page
+        populateBudgetCategorySelect(user.uid); // Load categories in budget form
+        loadBudgets(user.uid); // Load budgets
     } else {
         console.log("User logged out or not logged in.");
-        loadDashboardData(null); // مسح بيانات لوحة التحكم
-        populateCategoryAndSourceSelects(null); // مسح الفئات ومصادر الدخل في نموذج المعاملات
-        loadAllTransactions(null); // مسح المعاملات
-        loadCategoriesAndSources(null); // مسح الفئات والمصادر في صفحة إدارتها
+        loadDashboardData(null); // Clear dashboard data
+        populateCategoryAndSourceSelects(null); // Clear categories and income sources in transaction form
+        loadAllTransactions(null); // Clear transactions
+        loadCategoriesAndSources(null); // Clear categories and income sources in their management page
+        populateBudgetCategorySelect(null); // Clear categories in budget form
+        loadBudgets(null); // Clear budgets
     }
 });
 
 
 // ==========================================================
-// 7. إضافة مستمعي الأحداث (Event Listeners)
+// 7. Event Listeners
 // ==========================================================
 
-// لنموذج المصادقة (تسجيل الدخول / إنشاء حساب)
-// عند الضغط على زر "تسجيل الدخول" أو إرسال النموذج (افتراضيًا Submit للزر الأول)
+// Authentication form (login / register)
 loginBtn.addEventListener('click', handleLogin);
 authForm.addEventListener('submit', handleLogin);
 
-// عند الضغط على زر "إنشاء حساب جديد"
 registerBtn.addEventListener('click', handleRegister);
-
-// عند الضغط على زر "تسجيل الخروج"
 logoutBtn.addEventListener('click', handleLogout);
-
-// عند الضغط على زر وضع الضيف
 guestModeBtn.addEventListener('click', enterGuestMode);
 
-// أزرار التنقل لعرض الأقسام المناسبة
+// Navigation buttons to show appropriate sections
 dashboardNav.addEventListener('click', () => {
     showPage('dashboard-section');
     if (auth.currentUser) {
         loadDashboardData(auth.currentUser.uid);
     } else if (document.getElementById('auth-error-message').textContent.includes("وضع الضيف")) {
-        loadDashboardData("guest_user_demo"); // لإظهار بيانات الضيف إذا كان في وضع الضيف
+        loadDashboardData("guest_user_demo"); // Show guest data if in guest mode
     } else {
         loadDashboardData(null);
     }
 });
 
-// لنموذج إضافة معاملة جديدة
+// New transaction form
 transactionTypeSelect.addEventListener('change', toggleCategoryIncomeSourceFields);
 transactionForm.addEventListener('submit', addTransaction);
 
-// للفلاتر والفرز والبحث في جدول المعاملات
+// Filters, sort, and search in transactions table
 filterTypeSelect.addEventListener('change', () => loadAllTransactions(auth.currentUser ? auth.currentUser.uid : "guest_user_demo"));
 sortBySelect.addEventListener('change', () => loadAllTransactions(auth.currentUser ? auth.currentUser.uid : "guest_user_demo"));
 searchTransactionsInput.addEventListener('input', () => loadAllTransactions(auth.currentUser ? auth.currentUser.uid : "guest_user_demo"));
 
 
-// إضافة مستمع لزر "المعاملات" في شريط التنقل
+// Transactions navigation button
 transactionsNav.addEventListener('click', () => {
     showPage('transactions-section');
     const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
-    // إعادة تحميل البيانات عند الانتقال إلى صفحة المعاملات
+    // Reload data when navigating to transactions page
     populateCategoryAndSourceSelects(userId);
     loadAllTransactions(userId);
-    // تعيين التاريخ الافتراضي لليوم الحالي عند عرض النموذج
+    // Set default date to current date when showing the form
     transactionDateInput.valueAsDate = new Date();
-    toggleCategoryIncomeSourceFields(); // التأكد من ضبط حقول الفئة/المصدر بشكل صحيح
+    toggleCategoryIncomeSourceFields(); // Ensure category/source fields are correctly set
 });
 
-// لنموذج إدارة الفئات والمصادر
+// Category and Income Source management form
 categorySourceForm.addEventListener('submit', addCategoryOrSource);
 
-// إضافة مستمع لزر "الفئات والمصادر" في شريط التنقل
+// Categories & Income Sources navigation button
 categoriesSourcesNav.addEventListener('click', () => {
     showPage('categories-sources-section');
     const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
-    loadCategoriesAndSources(userId); // إعادة تحميل البيانات عند الانتقال للصفحة
+    loadCategoriesAndSources(userId); // Reload data when navigating to the page
 });
 
-// تعيين التاريخ الافتراضي لليوم الحالي عند تحميل الصفحة لأول مرة
+// Budget management form
+budgetForm.addEventListener('submit', addBudget);
+
+// Budgets navigation button
+budgetsNav.addEventListener('click', () => {
+    showPage('budgets-section');
+    const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
+    populateBudgetCategorySelect(userId); // Reload budget categories
+    loadBudgets(userId); // Reload budgets
+    // Set default month to current month when showing the form
+    budgetMonthInput.valueAsDate = new Date();
+});
+
+// Set default date for transaction form and budget month input on page load
 document.addEventListener('DOMContentLoaded', () => {
     transactionDateInput.valueAsDate = new Date();
+    budgetMonthInput.valueAsDate = new Date();
 });
