@@ -338,3 +338,44 @@ table th:last-child, table td:last-child {
     #income-sources-table td:nth-of-type(1):before { content: "الاسم"; }
     #income-sources-table td:nth-of-type(2):before { content: "الإجراءات"; }
 }
+
+/* public/css/style.css (أضف هذا في نهاية الملف) */
+
+/* Budget Progress Bar */
+.progress-bar-container {
+    width: 100%;
+    background-color: var(--border-color);
+    border-radius: 5px;
+    height: 15px;
+    overflow: hidden; /* لمنع تجاوز شريط التقدم */
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%; /* سيتغير بواسطة JavaScript */
+    background-color: var(--primary-color);
+    border-radius: 5px;
+    text-align: center;
+    color: white;
+    font-size: 0.7em;
+    transition: width 0.5s ease-in-out, background-color 0.5s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Colors for progress based on percentage */
+.progress-bar.green { background-color: #28a745; } /* Good */
+.progress-bar.yellow { background-color: #ffc107; } /* Approaching limit */
+.progress-bar.red { background-color: #dc3545; }   /* Exceeded limit */
+
+/* Responsive adjustments for budget tables */
+@media (max-width: 768px) {
+    #all-budgets-table td:nth-of-type(1):before { content: "الفئة"; }
+    #all-budgets-table td:nth-of-type(2):before { content: "المبلغ المستهدف"; }
+    #all-budgets-table td:nth-of-type(3):before { content: "المنفق حالياً"; }
+    #all-budgets-table td:nth-of-type(4):before { content: "المتبقي"; }
+    #all-budgets-table td:nth-of-type(5):before { content: "التقدم"; }
+    #all-budgets-table td:nth-of-type(6):before { content: "الشهر"; }
+    #all-budgets-table td:nth-of-type(7):before { content: "الإجراءات"; }
+}
