@@ -85,9 +85,57 @@
             <p>هنا يمكنك إدارة إيراداتك ومصاريفك.</p>
         </section>
 
-        <section id="categories-sources-section" class="page" style="display: none;">
-            <h2>الفئات ومصادر الدخل</h2>
-            <p>هنا يمكنك إدارة الفئات ومصادر الدخل.</p>
+       <section id="categories-sources-section" class="page" style="display: none;">
+            <h2>إدارة الفئات ومصادر الدخل</h2>
+
+            <div class="form-container">
+                <h3>إضافة فئة/مصدر جديد</h3>
+                <form id="category-source-form">
+                    <div class="form-group">
+                        <label for="item-type">النوع:</label>
+                        <select id="item-type" required>
+                            <option value="expenseCategory">فئة مصروف</option>
+                            <option value="incomeSource">مصدر دخل</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-name">الاسم:</label>
+                        <input type="text" id="item-name" placeholder="مثال: إيجار، عمل إضافي" required>
+                    </div>
+                    <button type="submit" id="add-item-btn">إضافة</button>
+                    <p id="category-source-message" class="error-message"></p>
+                </form>
+            </div>
+
+            <div class="categories-list">
+                <h3>فئات المصاريف</h3>
+                <table id="expense-categories-table">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="2" style="text-align: center;">لا توجد فئات مصاريف.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="sources-list">
+                <h3>مصادر الدخل</h3>
+                <table id="income-sources-table">
+                    <thead>
+                        <tr>
+                            <th>الاسم</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="2" style="text-align: center;">لا توجد مصادر دخل.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <section id="budgets-section" class="page" style="display: none;">
