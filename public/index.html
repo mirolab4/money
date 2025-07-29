@@ -310,7 +310,44 @@
 
         <section id="reports-section" class="page" style="display: none;">
             <h2>التقارير والإحصائيات</h2>
-            <p>هنا ستجد تقاريرك المالية.</p>
+
+            <div class="report-controls">
+                <div class="form-group">
+                    <label for="report-timeframe">الفترة الزمنية:</label>
+                    <select id="report-timeframe">
+                        <option value="last_7_days">آخر 7 أيام</option>
+                        <option value="last_30_days" selected>آخر 30 يومًا</option>
+                        <option value="this_month">هذا الشهر</option>
+                        <option value="last_month">الشهر الماضي</option>
+                        <option value="this_year">هذه السنة</option>
+                        <option value="last_year">السنة الماضية</option>
+                        <option value="all_time">كل الوقت</option>
+                    </select>
+                </div>
+                <button id="generate-reports-btn">توليد التقارير</button>
+                <p id="report-message" class="error-message"></p>
+            </div>
+
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3>ملخص المصروفات حسب الفئة</h3>
+                    <canvas id="expenseCategoryChart"></canvas>
+                    <p id="expense-chart-message" style="text-align: center; color: #666; font-style: italic;"></p>
+                </div>
+
+                <div class="chart-card">
+                    <h3>الدخل مقابل المصروفات بمرور الوقت</h3>
+                    <canvas id="incomeVsExpenseChart"></canvas>
+                    <p id="income-expense-chart-message" style="text-align: center; color: #666; font-style: italic;"></p>
+                </div>
+
+                <div class="chart-card">
+                    <h3>تتبع الميزانيات</h3>
+                    <canvas id="budgetTrackingChart"></canvas>
+                    <p id="budget-chart-message" style="text-align: center; color: #666; font-style: italic;"></p>
+                </div>
+
+                </div>
         </section>
 
         <section id="settings-section" class="page" style="display: none;">
@@ -324,6 +361,7 @@
         <p>&copy; 2024 مديرك المالي. جميع الحقوق محفوظة.</p>
     </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
