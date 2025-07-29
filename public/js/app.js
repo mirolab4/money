@@ -47,6 +47,13 @@ const logoutBtn = document.getElementById('logout-btn');
 // أقسام المحتوى (Content Sections)
 const allPages = document.querySelectorAll('.page'); // يحدد جميع الأقسام التي تحتوي على الكلاس 'page'
 
+// عناصر لوحة التحكم
+const totalIncomeEl = document.getElementById('total-income');
+const totalExpenseEl = document.getElementById('total-expense');
+const currentBalanceEl = document.getElementById('current-balance');
+const latestTransactionsTableBody = document.querySelector('#latest-transactions-table tbody');
+
+
 // ==========================================================
 // 2. وظائف واجهة المستخدم (UI Functions)
 // ==========================================================
@@ -226,23 +233,137 @@ const enterGuestMode = () => {
 
 
 // ==========================================================
-// 5. إدارة حالة المصادقة (Auth State Listener)
+// 5. وظائف جلب وعرض البيانات (Data Fetching & Rendering)
+// ==========================================================
+
+// وظيفة لجلب أحدث المعاملات (الإيرادات والمصاريف) من Firestore
+const getLatestTransactions = async (userId) => {
+    try {
+        const transactionsRef = collection(db, `users/${userId}/transactions`);
+        const q = query(transactionsRef, orderBy('date', 'desc'), limit(5)); // جلب أحدث 5 معاملات
+        const querySnapshot = await getDocs(q);
+        const transactions = [];
+        querySnapshot.forEach((doc) => {
+            transactions.push({ id: doc.id, ...doc.data() });
+        });
+        return transactions;
+    } catch (error) {
+        console.error("Error fetching latest transactions:", error);
+        return [];
+    }
+};
+
+// وظيفة لجلب جميع الإيرادات والمصاريف لحساب الإجماليات
+const getAllTransactions = async (userId) => {
+    try {
+        const transactionsRef = collection(db, `users/${userId}/transactions`);
+        const querySnapshot = await getDocs(transactionsRef);
+        const transactions = [];
+        querySnapshot.forEach((doc) => {
+            transactions.push({ id: doc.id, ...doc.data() });
+        });
+        return transactions;
+    } catch (error) {
+        console.error("Error fetching all transactions:", error);
+        return [];
+    }
+};
+
+// وظيفة لعرض أحدث المعاملات في الجدول
+const renderLatestTransactions = (transactions) => {
+    latestTransactionsTableBody.innerHTML = ''; // مسح المحتوى الحالي
+    if (transactions.length === 0) {
+        latestTransactionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد معاملات لعرضها.</td></tr>';
+        return;
+    }
+
+    transactions.forEach(transaction => {
+        const row = document.createElement('tr');
+        const transactionType = transaction.type === 'income' ? 'إيراد' : 'مصروف';
+        const incomeSource = transaction.type === 'income' ? (transaction.incomeSource || 'غير محدد') : '---';
+
+        row.innerHTML = `
+            <td>${transactionType}</td>
+            <td>${transaction.amount ? transaction.amount.toFixed(2) : '0.00'}</td>
+            <td>${transaction.currency || 'JOD'}</td>
+            <td>${transaction.category || 'غير مصنفة'}</td>
+            <td>${incomeSource}</td>
+            <td>${transaction.date ? new Date(transaction.date).toLocaleDateString('ar-EG') : 'غير محدد'}</td>
+            <td>${transaction.description || 'لا يوجد وصف'}</td>
+        `;
+        latestTransactionsTableBody.appendChild(row);
+    });
+};
+
+// وظيفة لحساب وعرض الإجماليات في بطاقات الملخص
+const calculateAndRenderSummary = (transactions) => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    // بما أننا لا نتعامل مع تحويل العملات، سنفترض عملة واحدة الآن (JOD افتراضياً)
+    // لاحقاً يمكننا إضافة منطق للتعامل مع عملات متعددة بعرضها منفصلة أو تحويلها تقديرياً
+    transactions.forEach(transaction => {
+        // إذا كان هناك عملات متعددة، يمكنك تعديل هذا هنا لفلترة أو جمع حسب العملة
+        // حالياً نفترض جميع المعاملات بنفس العملة الافتراضية
+        if (transaction.type === 'income') {
+            totalIncome += transaction.amount || 0;
+        } else if (transaction.type === 'expense') {
+            totalExpense += transaction.amount || 0;
+        }
+    });
+
+    const currentBalance = totalIncome - totalExpense;
+
+    totalIncomeEl.textContent = `${totalIncome.toFixed(2)} JOD`; // نفترض JOD كعملة افتراضية
+    totalExpenseEl.textContent = `${totalExpense.toFixed(2)} JOD`;
+    currentBalanceEl.textContent = `${currentBalance.toFixed(2)} JOD`;
+
+    // تغيير لون الرصيد بناءً على القيمة
+    if (currentBalance < 0) {
+        currentBalanceEl.style.color = '#dc3545'; // أحمر
+    } else {
+        currentBalanceEl.style.color = '#007bff'; // أزرق (نفس اللون الافتراضي)
+    }
+};
+
+// وظيفة رئيسية لتحميل بيانات لوحة التحكم
+const loadDashboardData = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        // في وضع الضيف أو بدون مستخدم، لا نجلب بيانات حقيقية
+        // يمكن هنا تحميل بيانات تجريبية ثابتة لوضع الضيف
+        totalIncomeEl.textContent = '0.00 JOD';
+        totalExpenseEl.textContent = '0.00 JOD';
+        currentBalanceEl.textContent = '0.00 JOD';
+        latestTransactionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد بيانات متاحة في وضع الضيف أو بدون تسجيل دخول.</td></tr>';
+        return;
+    }
+
+    // جلب أحدث 5 معاملات للعرض المباشر
+    const latest = await getLatestTransactions(userId);
+    renderLatestTransactions(latest);
+
+    // جلب جميع المعاملات لحساب الإجماليات
+    const all = await getAllTransactions(userId);
+    calculateAndRenderSummary(all);
+};
+
+// ==========================================================
+// 6. إدارة حالة المصادقة (Auth State Listener)
 // ==========================================================
 // هذه الوظيفة تعمل تلقائيًا عند تغيير حالة المصادقة (تسجيل دخول/خروج)
 onAuthStateChanged(auth, (user) => {
     updateNavForAuthState(user); // تحديث الواجهة بناءً على المستخدم
     if (user) {
-        // إذا كان المستخدم مسجل دخول بالفعل، يمكننا تحميل بياناته
         console.log("User logged in:", user.uid);
-        // هنا يمكنك استدعاء وظيفة لتحميل بيانات لوحة التحكم
-        // loadDashboardData(user.uid); // ستنشئ هذه الوظيفة لاحقا
+        loadDashboardData(user.uid); // الآن نستدعي وظيفة تحميل بيانات لوحة التحكم
     } else {
         console.log("User logged out or not logged in.");
+        loadDashboardData(null); // مسح البيانات عند تسجيل الخروج أو عدم وجود مستخدم
     }
 });
 
 // ==========================================================
-// 6. إضافة مستمعي الأحداث (Event Listeners)
+// 7. إضافة مستمعي الأحداث (Event Listeners)
 // ==========================================================
 
 // لنموذج المصادقة (تسجيل الدخول / إنشاء حساب)
@@ -260,7 +381,16 @@ logoutBtn.addEventListener('click', handleLogout);
 guestModeBtn.addEventListener('click', enterGuestMode);
 
 // أزرار التنقل لعرض الأقسام المناسبة (حالياً تعرض رسالة بسيطة)
-dashboardNav.addEventListener('click', () => showPage('dashboard-section'));
+dashboardNav.addEventListener('click', () => {
+    showPage('dashboard-section');
+    if (auth.currentUser) {
+        loadDashboardData(auth.currentUser.uid);
+    } else if (document.getElementById('auth-error-message').textContent.includes("وضع الضيف")) {
+        loadDashboardData("guest_user_demo"); // لإظهار بيانات الضيف إذا كان في وضع الضيف
+    } else {
+        loadDashboardData(null);
+    }
+});
 transactionsNav.addEventListener('click', () => showPage('transactions-section'));
 categoriesSourcesNav.addEventListener('click', () => showPage('categories-sources-section'));
 budgetsNav.addEventListener('click', () => showPage('budgets-section'));
