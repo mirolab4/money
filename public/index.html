@@ -233,8 +233,79 @@
         </section>
 
         <section id="assets-liabilities-section" class="page" style="display: none;">
-            <h2>الأصول والخصوم</h2>
-            <p>هنا يمكنك تتبع أصولك وخصومك.</p>
+            <h2>تتبع الأصول والخصوم</h2>
+
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>إجمالي الأصول</h3>
+                    <p id="total-assets">0.00 JOD</p>
+                </div>
+                <div class="card">
+                    <h3>إجمالي الخصوم</h3>
+                    <p id="total-liabilities">0.00 JOD</p>
+                </div>
+                <div class="card">
+                    <h3>القيمة الصافية</h3>
+                    <p id="net-worth">0.00 JOD</p>
+                </div>
+            </div>
+
+            <div class="form-container">
+                <h3>إضافة أصل أو خصم جديد</h3>
+                <form id="asset-liability-form">
+                    <div class="form-group">
+                        <label for="item-type-al">النوع:</label>
+                        <select id="item-type-al" required>
+                            <option value="asset">أصل</option>
+                            <option value="liability">خصم</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-name-al">الاسم/الوصف:</label>
+                        <input type="text" id="item-name-al" placeholder="مثال: مدخرات بنكية، قرض سيارة" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-value-al">القيمة الحالية:</label>
+                        <input type="number" id="item-value-al" placeholder="مثال: 5000" min="0" step="0.01" required>
+                    </div>
+                    <button type="submit" id="add-item-al-btn">إضافة</button>
+                    <p id="asset-liability-message" class="error-message"></p>
+                </form>
+            </div>
+
+            <div class="assets-list">
+                <h3>أصولك</h3>
+                <table id="assets-table">
+                    <thead>
+                        <tr>
+                            <th>الأصل</th>
+                            <th>القيمة</th>
+                            <th>تاريخ الإضافة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" style="text-align: center;">لا توجد أصول لعرضها.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="liabilities-list">
+                <h3>خصومك</h3>
+                <table id="liabilities-table">
+                    <thead>
+                        <tr>
+                            <th>الخصم</th>
+                            <th>القيمة</th>
+                            <th>تاريخ الإضافة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="4" style="text-align: center;">لا توجد خصوم لعرضها.</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
         <section id="reports-section" class="page" style="display: none;">
