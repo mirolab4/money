@@ -569,3 +569,113 @@ table th:last-child, table td:last-child {
         width: 100%;
     }
 }
+
+
+
+/* Filters, Sort, Search in Tables */
+.filters-sort-search {
+    display: flex; /* Makes elements align horizontally */
+    flex-wrap: wrap; /* Allows wrapping on smaller screens */
+    gap: 15px; /* Space between filter groups */
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Allows groups to grow and shrink */
+    min-width: 180px; /* Minimum width for responsiveness */
+}
+
+.filter-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+    font-size: 0.9em;
+}
+
+.filters-sort-search select,
+.filters-sort-search input[type="text"] {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1em;
+    width: 100%; /* Ensures inputs take full width of their group */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+.search-group {
+    flex-grow: 2; /* Allow search input to take more space */
+}
+
+/* Action buttons in tables (Edit, Delete) */
+.action-buttons {
+    display: flex;
+    gap: 5px; /* Space between buttons */
+    justify-content: center; /* Center buttons horizontally in cell */
+    align-items: center;
+}
+
+.action-buttons button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    font-size: 1em; /* Adjust icon size */
+}
+
+.action-buttons button i {
+    color: #555; /* Default icon color */
+}
+
+.action-buttons .edit-btn:hover {
+    background-color: #e0f2f7; /* Light blue on hover */
+}
+.action-buttons .edit-btn i {
+    color: #007bff; /* Blue for edit icon */
+}
+
+.action-buttons .delete-btn:hover {
+    background-color: #fcebeb; /* Light red on hover */
+}
+.action-buttons .delete-btn i {
+    color: #dc3545; /* Red for delete icon */
+}
+
+/* Make tables responsive */
+.table-responsive {
+    overflow-x: auto; /* Allows horizontal scrolling on small screens */
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+table th, table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: right; /* Align text to right for Arabic */
+}
+
+table th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+    color: #333;
+}
+
+table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+table tr:hover {
+    background-color: #f1f1f1;
+}
