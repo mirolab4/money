@@ -73,6 +73,16 @@ const filterTypeSelect = document.getElementById('filter-type');
 const sortBySelect = document.getElementById('sort-by');
 const searchTransactionsInput = document.getElementById('search-transactions');
 
+// عناصر قسم الفئات ومصادر الدخل
+const categorySourceForm = document.getElementById('category-source-form');
+const itemTypeSelect = document.getElementById('item-type');
+const itemNameInput = document.getElementById('item-name');
+const addItemBtn = document.getElementById('add-item-btn');
+const categorySourceMessage = document.getElementById('category-source-message');
+
+const expenseCategoriesTableBody = document.querySelector('#expense-categories-table tbody');
+const incomeSourcesTableBody = document.querySelector('#income-sources-table tbody');
+
 
 // ==========================================================
 // 2. وظائف واجهة المستخدم (UI Functions)
@@ -143,6 +153,18 @@ const toggleCategoryIncomeSourceFields = () => {
         transactionCategorySelect.removeAttribute('required');
         transactionIncomeSourceSelect.setAttribute('required', 'true');
     }
+};
+
+// وظيفة لعرض رسائل النجاح/الخطأ في نموذج الفئات/المصادر
+const displayCategorySourceMessage = (message, isError = false) => {
+    categorySourceMessage.textContent = message;
+    categorySourceMessage.className = isError ? 'error-message' : 'success-message';
+    categorySourceMessage.style.display = 'block';
+
+    setTimeout(() => {
+        categorySourceMessage.textContent = '';
+        categorySourceMessage.style.display = 'none';
+    }, 5000); // إخفاء الرسالة بعد 5 ثوانٍ
 };
 
 
@@ -633,6 +655,149 @@ const handleDeleteTransaction = async (transactionId) => {
     }
 };
 
+// وظيفة لعرض فئات المصاريف في الجدول الخاص بها
+const renderExpenseCategories = (categories) => {
+    expenseCategoriesTableBody.innerHTML = '';
+    if (categories.length === 0) {
+        expenseCategoriesTableBody.innerHTML = '<tr><td colspan="2" style="text-align: center;">لا توجد فئات مصاريف.</td></tr>';
+        return;
+    }
+    categories.forEach(category => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${category.name}</td>
+            <td class="action-buttons">
+                <button class="delete-category-btn" data-id="${category.id}"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        expenseCategoriesTableBody.appendChild(row);
+    });
+    document.querySelectorAll('.delete-category-btn').forEach(button => {
+        button.addEventListener('click', (e) => handleDeleteCategory(e.currentTarget.dataset.id));
+    });
+};
+
+// وظيفة لعرض مصادر الدخل في الجدول الخاص بها
+const renderIncomeSources = (sources) => {
+    incomeSourcesTableBody.innerHTML = '';
+    if (sources.length === 0) {
+        incomeSourcesTableBody.innerHTML = '<tr><td colspan="2" style="text-align: center;">لا توجد مصادر دخل.</td></tr>';
+        return;
+    }
+    sources.forEach(source => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${source.name}</td>
+            <td class="action-buttons">
+                <button class="delete-source-btn" data-id="${source.id}"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        incomeSourcesTableBody.appendChild(row);
+    });
+    document.querySelectorAll('.delete-source-btn').forEach(button => {
+        button.addEventListener('click', (e) => handleDeleteSource(e.currentTarget.dataset.id));
+    });
+};
+
+// وظيفة رئيسية لتحميل وعرض الفئات والمصادر
+const loadCategoriesAndSources = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        renderExpenseCategories([]); // عرض فارغ لوضع الضيف
+        renderIncomeSources([]);    // عرض فارغ لوضع الضيف
+        return;
+    }
+    const categories = await getExpenseCategories(userId);
+    const sources = await getIncomeSources(userId);
+    renderExpenseCategories(categories);
+    renderIncomeSources(sources);
+};
+
+// وظيفة لإضافة فئة أو مصدر جديد
+const addCategoryOrSource = async (e) => {
+    e.preventDefault();
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+    if (!userId) {
+        displayCategorySourceMessage("يجب تسجيل الدخول لإضافة فئة/مصدر.", true);
+        return;
+    }
+    if (userId === "guest_user_demo") {
+        displayCategorySourceMessage("لا يمكن إضافة فئات/مصادر في وضع الضيف.", true);
+        return;
+    }
+
+    const type = itemTypeSelect.value;
+    const name = itemNameInput.value.trim();
+
+    if (!name) {
+        displayCategorySourceMessage("الاسم مطلوب.", true);
+        return;
+    }
+
+    try {
+        let collectionPath;
+        if (type === 'expenseCategory') {
+            collectionPath = `users/${userId}/expenseCategories`;
+        } else { // incomeSource
+            collectionPath = `users/${userId}/incomeSources`;
+        }
+        
+        await addDoc(collection(db, collectionPath), { name: name });
+        displayCategorySourceMessage("تمت الإضافة بنجاح!");
+        categorySourceForm.reset();
+        loadCategoriesAndSources(userId); // إعادة تحميل الجداول
+        populateCategoryAndSourceSelects(userId); // تحديث قوائم المعاملات
+        loadAllTransactions(userId); // تحديث جدول المعاملات
+    } catch (error) {
+        console.error("Error adding category/source:", error);
+        displayCategorySourceMessage("فشل في الإضافة: " + error.message, true);
+    }
+};
+
+// وظيفة لحذف فئة مصروف
+const handleDeleteCategory = async (categoryId) => {
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+    if (!userId || userId === "guest_user_demo") {
+        displayCategorySourceMessage("لا يمكن حذف فئات في وضع الضيف أو بدون تسجيل دخول.", true);
+        return;
+    }
+
+    if (confirm("هل أنت متأكد من حذف هذه الفئة؟ سيتم حذف جميع المعاملات المرتبطة بها! (ميزة سيتم تطويرها لاحقاً، حالياً ستحذف الفئة فقط.)")) {
+        try {
+            await deleteDoc(doc(db, `users/${userId}/expenseCategories`, categoryId));
+            displayCategorySourceMessage("تم حذف الفئة بنجاح!");
+            loadCategoriesAndSources(userId); // تحديث الجداول
+            populateCategoryAndSourceSelects(userId); // تحديث قوائم المعاملات
+            loadAllTransactions(userId); // تحديث جدول المعاملات
+        } catch (error) {
+            console.error("Error deleting category:", error);
+            displayCategorySourceMessage("فشل في حذف الفئة: " + error.message, true);
+        }
+    }
+};
+
+// وظيفة لحذف مصدر دخل
+const handleDeleteSource = async (sourceId) => {
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+    if (!userId || userId === "guest_user_demo") {
+        displayCategorySourceMessage("لا يمكن حذف مصادر في وضع الضيف أو بدون تسجيل دخول.", true);
+        return;
+    }
+
+    if (confirm("هل أنت متأكد من حذف هذا المصدر؟ سيتم حذف جميع المعاملات المرتبطة به! (ميزة سيتم تطويرها لاحقاً، حالياً ستحذف المصدر فقط.)")) {
+        try {
+            await deleteDoc(doc(db, `users/${userId}/incomeSources`, sourceId));
+            displayCategorySourceMessage("تم حذف المصدر بنجاح!");
+            loadCategoriesAndSources(userId); // تحديث الجداول
+            populateCategoryAndSourceSelects(userId); // تحديث قوائم المعاملات
+            loadAllTransactions(userId); // تحديث جدول المعاملات
+        } catch (error) {
+            console.error("Error deleting source:", error);
+            displayCategorySourceMessage("فشل في حذف المصدر: " + error.message, true);
+        }
+    }
+};
+
 
 // ==========================================================
 // 6. إدارة حالة المصادقة (Auth State Listener)
@@ -643,13 +808,15 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         console.log("User logged in:", user.uid);
         loadDashboardData(user.uid); // تحميل بيانات لوحة التحكم
-        populateCategoryAndSourceSelects(user.uid); // تحميل الفئات ومصادر الدخل
+        populateCategoryAndSourceSelects(user.uid); // تحميل الفئات ومصادر الدخل في نموذج المعاملات
         loadAllTransactions(user.uid); // تحميل جميع المعاملات
+        loadCategoriesAndSources(user.uid); // تحميل الفئات والمصادر في صفحة إدارتها
     } else {
         console.log("User logged out or not logged in.");
         loadDashboardData(null); // مسح بيانات لوحة التحكم
-        populateCategoryAndSourceSelects(null); // مسح الفئات ومصادر الدخل
+        populateCategoryAndSourceSelects(null); // مسح الفئات ومصادر الدخل في نموذج المعاملات
         loadAllTransactions(null); // مسح المعاملات
+        loadCategoriesAndSources(null); // مسح الفئات والمصادر في صفحة إدارتها
     }
 });
 
@@ -672,7 +839,7 @@ logoutBtn.addEventListener('click', handleLogout);
 // عند الضغط على زر وضع الضيف
 guestModeBtn.addEventListener('click', enterGuestMode);
 
-// أزرار التنقل لعرض الأقسام المناسبة (حالياً تعرض رسالة بسيطة)
+// أزرار التنقل لعرض الأقسام المناسبة
 dashboardNav.addEventListener('click', () => {
     showPage('dashboard-section');
     if (auth.currentUser) {
@@ -704,6 +871,16 @@ transactionsNav.addEventListener('click', () => {
     // تعيين التاريخ الافتراضي لليوم الحالي عند عرض النموذج
     transactionDateInput.valueAsDate = new Date();
     toggleCategoryIncomeSourceFields(); // التأكد من ضبط حقول الفئة/المصدر بشكل صحيح
+});
+
+// لنموذج إدارة الفئات والمصادر
+categorySourceForm.addEventListener('submit', addCategoryOrSource);
+
+// إضافة مستمع لزر "الفئات والمصادر" في شريط التنقل
+categoriesSourcesNav.addEventListener('click', () => {
+    showPage('categories-sources-section');
+    const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
+    loadCategoriesAndSources(userId); // إعادة تحميل البيانات عند الانتقال للصفحة
 });
 
 // تعيين التاريخ الافتراضي لليوم الحالي عند تحميل الصفحة لأول مرة
