@@ -5,7 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebas
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
 
-// Firebase Configuration - (تم تعديل هذا الجزء ليناسب الإعدادات الخاصة بك)
+// Firebase Configuration - (هذه هي الإعدادات الخاصة بمشروعك)
 const firebaseConfig = {
   apiKey: "AIzaSyC-pZm-mV7fvfMFVEqOq1s5vnoVHQ4Olc4",
   authDomain: "money-969a6.firebaseapp.com",
@@ -53,6 +53,26 @@ const totalExpenseEl = document.getElementById('total-expense');
 const currentBalanceEl = document.getElementById('current-balance');
 const latestTransactionsTableBody = document.querySelector('#latest-transactions-table tbody');
 
+// عناصر قسم المعاملات
+const transactionForm = document.getElementById('transaction-form');
+const transactionTypeSelect = document.getElementById('transaction-type');
+const transactionAmountInput = document.getElementById('transaction-amount');
+const transactionCurrencyInput = document.getElementById('transaction-currency');
+const categoryGroup = document.getElementById('category-group');
+const transactionCategorySelect = document.getElementById('transaction-category');
+const incomeSourceGroup = document.getElementById('income-source-group');
+const transactionIncomeSourceSelect = document.getElementById('transaction-income-source');
+const transactionDateInput = document.getElementById('transaction-date');
+const transactionDescriptionTextarea = document.getElementById('transaction-description');
+const addTransactionBtn = document.getElementById('add-transaction-btn');
+const transactionErrorMessage = document.getElementById('transaction-error-message');
+const transactionSuccessMessage = document.getElementById('transaction-success-message');
+
+const allTransactionsTableBody = document.querySelector('#all-transactions-table tbody');
+const filterTypeSelect = document.getElementById('filter-type');
+const sortBySelect = document.getElementById('sort-by');
+const searchTransactionsInput = document.getElementById('search-transactions');
+
 
 // ==========================================================
 // 2. وظائف واجهة المستخدم (UI Functions)
@@ -94,6 +114,37 @@ const updateNavForAuthState = (user) => {
         showPage('auth-section'); // عرض صفحة المصادقة
     }
 };
+
+// وظيفة لعرض رسائل النجاح/الخطأ في نموذج المعاملات
+const displayTransactionMessage = (message, isError = false) => {
+    const targetElement = isError ? transactionErrorMessage : transactionSuccessMessage;
+    const otherElement = isError ? transactionSuccessMessage : transactionErrorMessage;
+
+    targetElement.textContent = message;
+    targetElement.style.display = 'block';
+    otherElement.style.display = 'none';
+
+    setTimeout(() => {
+        targetElement.textContent = '';
+        targetElement.style.display = 'none';
+    }, 5000); // إخفاء الرسالة بعد 5 ثوانٍ
+};
+
+// وظيفة لتبديل حقول الفئة/المصدر بناءً على نوع المعاملة
+const toggleCategoryIncomeSourceFields = () => {
+    if (transactionTypeSelect.value === 'expense') {
+        categoryGroup.style.display = 'block';
+        incomeSourceGroup.style.display = 'none';
+        transactionCategorySelect.setAttribute('required', 'true');
+        transactionIncomeSourceSelect.removeAttribute('required');
+    } else { // income
+        categoryGroup.style.display = 'none';
+        incomeSourceGroup.style.display = 'block';
+        transactionCategorySelect.removeAttribute('required');
+        transactionIncomeSourceSelect.setAttribute('required', 'true');
+    }
+};
+
 
 // ==========================================================
 // 3. وظائف المصادقة (Authentication Functions)
@@ -347,6 +398,242 @@ const loadDashboardData = async (userId) => {
     calculateAndRenderSummary(all);
 };
 
+// وظيفة لجلب فئات المصاريف
+const getExpenseCategories = async (userId) => {
+    try {
+        const categoriesRef = collection(db, `users/${userId}/expenseCategories`);
+        const querySnapshot = await getDocs(categoriesRef);
+        const categories = [];
+        querySnapshot.forEach((doc) => {
+            categories.push({ id: doc.id, ...doc.data() });
+        });
+        return categories;
+    } catch (error) {
+        console.error("Error fetching expense categories:", error);
+        return [];
+    }
+};
+
+// وظيفة لجلب مصادر الدخل
+const getIncomeSources = async (userId) => {
+    try {
+        const sourcesRef = collection(db, `users/${userId}/incomeSources`);
+        const querySnapshot = await getDocs(sourcesRef);
+        const sources = [];
+        querySnapshot.forEach((doc) => {
+            sources.push({ id: doc.id, ...doc.data() });
+        });
+        return sources;
+    } catch (error) {
+        console.error("Error fetching income sources:", error);
+        return [];
+    }
+};
+
+// وظيفة لملء قائمتي الفئات ومصادر الدخل في النموذج
+const populateCategoryAndSourceSelects = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        transactionCategorySelect.innerHTML = '<option value="">لا يوجد فئات (وضع الضيف)</option>';
+        transactionIncomeSourceSelect.innerHTML = '<option value="">لا يوجد مصادر (وضع الضيف)</option>';
+        return;
+    }
+
+    const categories = await getExpenseCategories(userId);
+    const sources = await getIncomeSources(userId);
+
+    transactionCategorySelect.innerHTML = '<option value="">اختر فئة</option>';
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.name;
+        option.textContent = cat.name;
+        transactionCategorySelect.appendChild(option);
+    });
+
+    transactionIncomeSourceSelect.innerHTML = '<option value="">اختر مصدر</option>';
+    sources.forEach(src => {
+        const option = document.createElement('option');
+        option.value = src.name;
+        option.textContent = src.name;
+        transactionIncomeSourceSelect.appendChild(option);
+    });
+};
+
+// وظيفة لإضافة معاملة جديدة
+const addTransaction = async (e) => {
+    e.preventDefault();
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+    if (!userId) {
+        displayTransactionMessage("يجب تسجيل الدخول لإضافة معاملة.", true);
+        return;
+    }
+    if (userId === "guest_user_demo") {
+        displayTransactionMessage("لا يمكن إضافة معاملات في وضع الضيف.", true);
+        return;
+    }
+
+    const type = transactionTypeSelect.value;
+    const amount = parseFloat(transactionAmountInput.value);
+    const currency = transactionCurrencyInput.value.trim();
+    const category = transactionCategorySelect.value;
+    const incomeSource = transactionIncomeSourceSelect.value;
+    const date = transactionDateInput.value;
+    const description = transactionDescriptionTextarea.value.trim();
+
+    if (isNaN(amount) || amount <= 0) {
+        displayTransactionMessage("المبلغ غير صالح.", true);
+        return;
+    }
+    if (!currency) {
+        displayTransactionMessage("العملة مطلوبة.", true);
+        return;
+    }
+    if (type === 'expense' && !category) {
+        displayTransactionMessage("الفئة مطلوبة للمصاريف.", true);
+        return;
+    }
+    if (type === 'income' && !incomeSource) {
+        displayTransactionMessage("المصدر مطلوب للإيرادات.", true);
+        return;
+    }
+    if (!date) {
+        displayTransactionMessage("التاريخ مطلوب.", true);
+        return;
+    }
+
+    try {
+        const transactionData = {
+            type,
+            amount,
+            currency,
+            date: date, // حفظ التاريخ كنص ISO لتسهيل الفرز وعرضه
+            description,
+            createdAt: new Date().toISOString() // وقت الإنشاء
+        };
+
+        if (type === 'expense') {
+            transactionData.category = category;
+        } else {
+            transactionData.incomeSource = incomeSource;
+        }
+
+        await addDoc(collection(db, `users/${userId}/transactions`), transactionData);
+        displayTransactionMessage("تمت إضافة المعاملة بنجاح!");
+        transactionForm.reset(); // إعادة تعيين النموذج
+        // إعادة تحميل بيانات لوحة التحكم والمعاملات لتحديث الواجهة
+        loadDashboardData(userId);
+        loadAllTransactions(userId);
+        // تعيين التاريخ الافتراضي لليوم الحالي مرة أخرى بعد الإضافة
+        transactionDateInput.valueAsDate = new Date();
+        toggleCategoryIncomeSourceFields(); // إعادة ضبط حقول الفئة/المصدر بعد إعادة التعيين
+    } catch (error) {
+        console.error("Error adding transaction:", error);
+        displayTransactionMessage("فشل في إضافة المعاملة: " + error.message, true);
+    }
+};
+
+// وظيفة لجلب وعرض جميع المعاملات في جدول "جميع المعاملات"
+const loadAllTransactions = async (userId) => {
+    allTransactionsTableBody.innerHTML = ''; // مسح المحتوى الحالي
+
+    if (!userId || userId === "guest_user_demo") {
+        allTransactionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد بيانات متاحة في وضع الضيف أو بدون تسجيل دخول.</td></tr>';
+        return;
+    }
+
+    let transactions = await getAllTransactions(userId); // استخدم وظيفة getAllTransactions الموجودة
+    
+    // تطبيق الفلاتر والفرز
+    const filterType = filterTypeSelect.value;
+    const sortBy = sortBySelect.value;
+    const searchTerm = searchTransactionsInput.value.toLowerCase().trim();
+
+    // فلترة
+    if (filterType !== 'all') {
+        transactions = transactions.filter(t => t.type === filterType);
+    }
+
+    // بحث
+    if (searchTerm) {
+        transactions = transactions.filter(t => 
+            (t.description && t.description.toLowerCase().includes(searchTerm)) ||
+            (t.category && t.category.toLowerCase().includes(searchTerm)) ||
+            (t.incomeSource && t.incomeSource.toLowerCase().includes(searchTerm))
+        );
+    }
+
+    // فرز
+    transactions.sort((a, b) => {
+        if (sortBy === 'date-desc') {
+            return new Date(b.date) - new Date(a.date);
+        } else if (sortBy === 'date-asc') {
+            return new Date(a.date) - new Date(b.date);
+        } else if (sortBy === 'amount-desc') {
+            return (b.amount || 0) - (a.amount || 0);
+        } else if (sortBy === 'amount-asc') {
+            return (a.amount || 0) - (b.amount || 0);
+        }
+        return 0;
+    });
+
+
+    if (transactions.length === 0) {
+        allTransactionsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد معاملات لعرضها.</td></tr>';
+        return;
+    }
+
+    transactions.forEach(transaction => {
+        const row = document.createElement('tr');
+        const transactionType = transaction.type === 'income' ? 'إيراد' : 'مصروف';
+        const categoryOrSource = transaction.type === 'income' ? (transaction.incomeSource || 'غير محدد') : (transaction.category || 'غير مصنفة');
+
+        row.innerHTML = `
+            <td>${transactionType}</td>
+            <td>${transaction.amount ? transaction.amount.toFixed(2) : '0.00'}</td>
+            <td>${transaction.currency || 'JOD'}</td>
+            <td>${categoryOrSource}</td>
+            <td>${transaction.date ? new Date(transaction.date).toLocaleDateString('ar-EG') : 'غير محدد'}</td>
+            <td>${transaction.description || 'لا يوجد وصف'}</td>
+            <td class="action-buttons">
+                <button class="edit-btn" data-id="${transaction.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-btn" data-id="${transaction.id}"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        allTransactionsTableBody.appendChild(row);
+    });
+
+    // إضافة مستمعي الأحداث لأزرار الحذف والتعديل بعد إنشاء الصفوف
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', (e) => handleDeleteTransaction(e.currentTarget.dataset.id));
+    });
+    // buttons.forEach(button => {
+    //     button.addEventListener('click', (e) => handleEditTransaction(e.currentTarget.dataset.id));
+    // });
+    // حالياً لا يوجد دالة لـ handleEditTransaction
+};
+
+// وظيفة لحذف معاملة
+const handleDeleteTransaction = async (transactionId) => {
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+    if (!userId || userId === "guest_user_demo") {
+        displayTransactionMessage("لا يمكن حذف معاملات في وضع الضيف أو بدون تسجيل دخول.", true);
+        return;
+    }
+
+    if (confirm("هل أنت متأكد من حذف هذه المعاملة؟")) {
+        try {
+            await deleteDoc(doc(db, `users/${userId}/transactions`, transactionId));
+            displayTransactionMessage("تم حذف المعاملة بنجاح!");
+            loadDashboardData(userId); // تحديث لوحة التحكم
+            loadAllTransactions(userId); // تحديث قائمة المعاملات
+        } catch (error) {
+            console.error("Error deleting transaction:", error);
+            displayTransactionMessage("فشل في حذف المعاملة: " + error.message, true);
+        }
+    }
+};
+
+
 // ==========================================================
 // 6. إدارة حالة المصادقة (Auth State Listener)
 // ==========================================================
@@ -355,12 +642,17 @@ onAuthStateChanged(auth, (user) => {
     updateNavForAuthState(user); // تحديث الواجهة بناءً على المستخدم
     if (user) {
         console.log("User logged in:", user.uid);
-        loadDashboardData(user.uid); // الآن نستدعي وظيفة تحميل بيانات لوحة التحكم
+        loadDashboardData(user.uid); // تحميل بيانات لوحة التحكم
+        populateCategoryAndSourceSelects(user.uid); // تحميل الفئات ومصادر الدخل
+        loadAllTransactions(user.uid); // تحميل جميع المعاملات
     } else {
         console.log("User logged out or not logged in.");
-        loadDashboardData(null); // مسح البيانات عند تسجيل الخروج أو عدم وجود مستخدم
+        loadDashboardData(null); // مسح بيانات لوحة التحكم
+        populateCategoryAndSourceSelects(null); // مسح الفئات ومصادر الدخل
+        loadAllTransactions(null); // مسح المعاملات
     }
 });
+
 
 // ==========================================================
 // 7. إضافة مستمعي الأحداث (Event Listeners)
@@ -391,11 +683,30 @@ dashboardNav.addEventListener('click', () => {
         loadDashboardData(null);
     }
 });
-transactionsNav.addEventListener('click', () => showPage('transactions-section'));
-categoriesSourcesNav.addEventListener('click', () => showPage('categories-sources-section'));
-budgetsNav.addEventListener('click', () => showPage('budgets-section'));
-goalsNav.addEventListener('click', () => showPage('goals-section'));
-assetsLiabilitiesNav.addEventListener('click', () => showPage('assets-liabilities-section'));
-reportsNav.addEventListener('click', () => showPage('reports-section'));
-settingsNav.addEventListener('click', () => showPage('settings-section'));
-authNavBtn.addEventListener('click', () => showPage('auth-section')); // زر تسجيل الدخول/التسجيل يعود لصفحة المصادقة
+
+// لنموذج إضافة معاملة جديدة
+transactionTypeSelect.addEventListener('change', toggleCategoryIncomeSourceFields);
+transactionForm.addEventListener('submit', addTransaction);
+
+// للفلاتر والفرز والبحث في جدول المعاملات
+filterTypeSelect.addEventListener('change', () => loadAllTransactions(auth.currentUser ? auth.currentUser.uid : "guest_user_demo"));
+sortBySelect.addEventListener('change', () => loadAllTransactions(auth.currentUser ? auth.currentUser.uid : "guest_user_demo"));
+searchTransactionsInput.addEventListener('input', () => loadAllTransactions(auth.currentUser ? auth.currentUser.uid : "guest_user_demo"));
+
+
+// إضافة مستمع لزر "المعاملات" في شريط التنقل
+transactionsNav.addEventListener('click', () => {
+    showPage('transactions-section');
+    const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
+    // إعادة تحميل البيانات عند الانتقال إلى صفحة المعاملات
+    populateCategoryAndSourceSelects(userId);
+    loadAllTransactions(userId);
+    // تعيين التاريخ الافتراضي لليوم الحالي عند عرض النموذج
+    transactionDateInput.valueAsDate = new Date();
+    toggleCategoryIncomeSourceFields(); // التأكد من ضبط حقول الفئة/المصدر بشكل صحيح
+});
+
+// تعيين التاريخ الافتراضي لليوم الحالي عند تحميل الصفحة لأول مرة
+document.addEventListener('DOMContentLoaded', () => {
+    transactionDateInput.valueAsDate = new Date();
+});
