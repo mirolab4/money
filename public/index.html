@@ -80,10 +80,110 @@
             <div class="charts-container">
                 </div>
         </section>
-        <section id="transactions-section" class="page" style="display: none;">
-            <h2>إدارة المعاملات</h2>
-            <p>هنا يمكنك إدارة إيراداتك ومصاريفك.</p>
-        </section>
+     
+    <section id="transactions-section" class="page transactions-container" style="display: none;">
+        <h2>إدارة المعاملات</h2>
+
+        <div class="form-card">
+            <h3>إضافة معاملة جديدة</h3>
+            <form id="transaction-form">
+                <div class="form-group">
+                    <label for="transaction-type">النوع:</label>
+                    <select id="transaction-type" required>
+                        <option value="expense">مصروف</option>
+                        <option value="income">إيراد</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-amount">المبلغ:</label>
+                    <input type="number" id="transaction-amount" placeholder="0.00" step="0.01" required min="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-currency">العملة:</label>
+                    <input type="text" id="transaction-currency" value="JOD" placeholder="JOD" required>
+                </div>
+
+                <div class="form-group" id="category-group">
+                    <label for="transaction-category">الفئة:</label>
+                    <select id="transaction-category" required>
+                        <option value="">اختر فئة</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="income-source-group" style="display: none;">
+                    <label for="transaction-income-source">المصدر:</label>
+                    <select id="transaction-income-source">
+                        <option value="">اختر مصدر</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-date">التاريخ:</label>
+                    <input type="date" id="transaction-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-description">الوصف (اختياري):</label>
+                    <textarea id="transaction-description" rows="3" placeholder="وصف موجز للمعاملة"></textarea>
+                </div>
+
+                <button type="submit" id="add-transaction-btn" class="btn btn-primary">إضافة معاملة</button>
+                <p id="transaction-error-message" class="error-message" style="display: none;"></p>
+                <p id="transaction-success-message" class="success-message" style="display: none;"></p>
+            </form>
+        </div>
+
+        <div class="table-card">
+            <h3>جميع المعاملات</h3>
+            <div class="filters-sort-search">
+                <div class="filter-group">
+                    <label for="filter-type">تصفية حسب النوع:</label>
+                    <select id="filter-type">
+                        <option value="all">الكل</option>
+                        <option value="income">إيرادات</option>
+                        <option value="expense">مصروفات</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label for="sort-by">ترتيب حسب:</label>
+                    <select id="sort-by">
+                        <option value="date-desc">التاريخ (الأحدث أولاً)</option>
+                        <option value="date-asc">التاريخ (الأقدم أولاً)</option>
+                        <option value="amount-desc">المبلغ (من الأعلى للأدنى)</option>
+                        <option value="amount-asc">المبلغ (من الأدنى للأعلى)</option>
+                    </select>
+                </div>
+
+                <div class="filter-group search-group">
+                    <label for="search-transactions">البحث:</label>
+                    <input type="text" id="search-transactions" placeholder="بحث بالوصف، الفئة، أو المصدر...">
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table id="all-transactions-table">
+                    <thead>
+                        <tr>
+                            <th>النوع</th>
+                            <th>المبلغ</th>
+                            <th>العملة</th>
+                            <th>الفئة / المصدر</th>
+                            <th>التاريخ</th>
+                            <th>الوصف</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    
 
        <section id="categories-sources-section" class="page" style="display: none;">
             <h2>إدارة الفئات ومصادر الدخل</h2>
