@@ -1,1 +1,91 @@
 
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدير المصاريف والإيرادات الشخصي</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+
+    <header class="main-header">
+        <h1>مديرك المالي</h1>
+        <nav>
+            <button id="auth-btn" class="nav-button">تسجيل الدخول / التسجيل</button>
+            <button id="dashboard-nav" class="nav-button" style="display: none;">لوحة التحكم</button>
+            <button id="transactions-nav" class="nav-button" style="display: none;">المعاملات</button>
+            <button id="categories-sources-nav" class="nav-button" style="display: none;">الفئات والمصادر</button>
+            <button id="budgets-nav" class="nav-button" style="display: none;">الميزانيات</button>
+            <button id="goals-nav" class="nav-button" style="display: none;">الأهداف</button>
+            <button id="assets-liabilities-nav" class="nav-button" style="display: none;">الأصول والخصوم</button>
+            <button id="reports-nav" class="nav-button" style="display: none;">التقارير</button>
+            <button id="settings-nav" class="nav-button" style="display: none;">الإعدادات</button>
+            <button id="logout-btn" class="nav-button" style="display: none;">تسجيل الخروج</button>
+        </nav>
+    </header>
+
+    <main id="app-container">
+        <section id="auth-section" class="page active">
+            <h2>تسجيل الدخول / إنشاء حساب</h2>
+            <form id="auth-form">
+                <input type="email" id="auth-email" placeholder="البريد الإلكتروني" required>
+                <input type="password" id="auth-password" placeholder="كلمة المرور" required>
+                <button type="submit" id="login-btn">تسجيل الدخول</button>
+                <button type="button" id="register-btn">إنشاء حساب جديد</button>
+                <p id="auth-error-message" class="error-message"></p>
+            </form>
+            <p>يمكنك تجربة وضع الضيف بدون تسجيل دخول:</p>
+            <button id="guest-mode-btn">وضع الضيف</button>
+        </section>
+
+        <section id="dashboard-section" class="page" style="display: none;">
+            <h2>لوحة التحكم</h2>
+            <p>أهلاً بك في لوحة التحكم!</p>
+        </section>
+
+        <section id="transactions-section" class="page" style="display: none;">
+            <h2>إدارة المعاملات</h2>
+            <p>هنا يمكنك إدارة إيراداتك ومصاريفك.</p>
+        </section>
+
+        <section id="categories-sources-section" class="page" style="display: none;">
+            <h2>الفئات ومصادر الدخل</h2>
+            <p>هنا يمكنك إدارة الفئات ومصادر الدخل.</p>
+        </section>
+
+        <section id="budgets-section" class="page" style="display: none;">
+            <h2>الميزانيات</h2>
+            <p>هنا يمكنك تحديد وإدارة ميزانياتك.</p>
+        </section>
+
+        <section id="goals-section" class="page" style="display: none;">
+            <h2>الأهداف المالية</h2>
+            <p>هنا يمكنك تحديد وتتبع أهدافك المالية.</p>
+        </section>
+
+        <section id="assets-liabilities-section" class="page" style="display: none;">
+            <h2>الأصول والخصوم</h2>
+            <p>هنا يمكنك تتبع أصولك وخصومك.</p>
+        </section>
+
+        <section id="reports-section" class="page" style="display: none;">
+            <h2>التقارير والإحصائيات</h2>
+            <p>هنا ستجد تقاريرك المالية.</p>
+        </section>
+
+        <section id="settings-section" class="page" style="display: none;">
+            <h2>الإعدادات</h2>
+            <p>هنا يمكنك تعديل إعدادات التطبيق.</p>
+        </section>
+
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2024 مديرك المالي. جميع الحقوق محفوظة.</p>
+    </footer>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
