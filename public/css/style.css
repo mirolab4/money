@@ -395,3 +395,65 @@ table th:last-child, table td:last-child {
     #all-goals-table td:nth-of-type(6):before { content: "الموعد النهائي"; }
     #all-goals-table td:nth-of-type(7):before { content: "الإجراءات"; }
 }
+
+/* public/css/style.css (أضف هذا في نهاية الملف) */
+
+/* Specific styles for Assets and Liabilities Summary Cards (similar to dashboard) */
+.assets-liabilities-section .summary-cards {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+    gap: 20px;
+}
+
+.assets-liabilities-section .summary-cards .card {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    text-align: center;
+    flex: 1;
+    min-width: 280px; /* Adjust as needed */
+}
+
+.assets-liabilities-section .summary-cards .card h3 {
+    color: #333;
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+.assets-liabilities-section .summary-cards .card p {
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #007bff; /* Blue for general values */
+}
+
+#total-assets {
+    color: #28a745; /* Green for assets */
+}
+
+#total-liabilities {
+    color: #dc3545; /* Red for liabilities */
+}
+
+#net-worth {
+    color: #6f42c1; /* Purple for net worth */
+}
+/* If Net Worth is negative */
+#net-worth.negative {
+    color: #dc3545; /* Red for negative net worth */
+}
+
+/* Responsive adjustments for tables */
+@media (max-width: 768px) {
+    #assets-table td:nth-of-type(1):before { content: "الأصل"; }
+    #assets-table td:nth-of-type(2):before { content: "القيمة"; }
+    #assets-table td:nth-of-type(3):before { content: "تاريخ الإضافة"; }
+    #assets-table td:nth-of-type(4):before { content: "الإجراءات"; }
+
+    #liabilities-table td:nth-of-type(1):before { content: "الخصم"; }
+    #liabilities-table td:nth-of-type(2):before { content: "القيمة"; }
+    #liabilities-table td:nth-of-type(3):before { content: "تاريخ الإضافة"; }
+    #liabilities-table td:nth-of-type(4):before { content: "الإجراءات"; }
+}
