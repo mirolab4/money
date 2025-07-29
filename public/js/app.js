@@ -10,7 +10,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyC-pZm-mV7fvfMFVEqOq1s5vnoVHQ4Olc4",
   authDomain: "money-969a6.firebaseapp.com",
   projectId: "money-969a6",
-  storageBucket: "money-969a6.firebasestorage.app",
+  storageBucket: "money-969a6.firebaseastorage.app",
   messagingSenderId: "51946916024",
   appId: "1:51946916024:web:e50cb67494fe5305f14c4d"
 };
@@ -117,6 +117,23 @@ const assetLiabilityMessage = document.getElementById('asset-liability-message')
 
 const assetsTableBody = document.querySelector('#assets-table tbody');
 const liabilitiesTableBody = document.querySelector('#liabilities-table tbody');
+
+// Reports Section Elements
+const reportTimeframeSelect = document.getElementById('report-timeframe');
+const generateReportsBtn = document.getElementById('generate-reports-btn');
+const reportMessage = document.getElementById('report-message');
+
+const expenseCategoryChartCanvas = document.getElementById('expenseCategoryChart');
+const incomeVsExpenseChartCanvas = document.getElementById('incomeVsExpenseChart');
+const budgetTrackingChartCanvas = document.getElementById('budgetTrackingChart');
+
+const expenseChartMessage = document.getElementById('expense-chart-message');
+const incomeExpenseChartMessage = document.getElementById('income-expense-chart-message');
+const budgetChartMessage = document.getElementById('budget-chart-message');
+
+let expenseCategoryChartInstance = null; // To store Chart.js instance
+let incomeVsExpenseChartInstance = null;
+let budgetTrackingChartInstance = null;
 
 
 // ==========================================================
@@ -235,6 +252,18 @@ const displayAssetLiabilityMessage = (message, isError = false) => {
     setTimeout(() => {
         assetLiabilityMessage.textContent = '';
         assetLiabilityMessage.style.display = 'none';
+    }, 5000);
+};
+
+// Function to display success/error messages for reports section
+const displayReportMessage = (message, isError = false) => {
+    reportMessage.textContent = message;
+    reportMessage.className = isError ? 'error-message' : 'success-message';
+    reportMessage.style.display = 'block';
+
+    setTimeout(() => {
+        reportMessage.textContent = '';
+        reportMessage.style.display = 'none';
     }, 5000);
 };
 
@@ -1195,7 +1224,7 @@ const addGoal = async (e) => {
             deadline: deadline || null, // Save as null if no deadline
             createdAt: new Date().toISOString()
         });
-        displayGoalMessage("تمت إضافة الهدف بنSجاح!");
+        displayGoalMessage("تمت إضافة الهدف بنجاح!");
         goalForm.reset(); // Reset the form
         loadGoals(userId); // Reload goals table
         // Reset deadline input if needed, or leave it blank
@@ -1453,6 +1482,436 @@ const handleDeleteLiability = async (liabilityId) => {
 };
 
 
+// === New Functions for Reports ===
+
+// Helper function to get date range based on timeframe
+const getDateRange = (timeframe) => {
+    const now = new Date();
+    let startDate = null;
+    let endDate = now;
+
+    switch (timeframe) {
+        case 'last_7_days':
+            startDate = new Date();
+            startDate.setDate(now.getDate() - 7);
+            break;
+        case 'last_30_days':
+            startDate = new Date();
+            startDate.setDate(now.getDate() - 30);
+            break;
+        case 'this_month':
+            startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+            break;
+        case 'last_month':
+            startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            endDate = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
+            break;
+        case 'this_year':
+            startDate = new Date(now.getFullYear(), 0, 1);
+            break;
+        case 'last_year':
+            startDate = new Date(now.getFullYear() - 1, 0, 1);
+            endDate = new Date(now.getFullYear() - 1, 11, 31);
+            break;
+        case 'all_time':
+            startDate = null; // No start date filter
+            break;
+    }
+
+    // Format dates to YYYY-MM-DD for comparison with Firestore string dates
+    const format = (date) => date ? date.toISOString().split('T')[0] : null;
+
+    return {
+        startDate: format(startDate),
+        endDate: format(endDate)
+    };
+};
+
+// Function to fetch transactions for reports based on timeframe
+const getTransactionsForReports = async (userId, timeframe) => {
+    if (!userId || userId === "guest_user_demo") return [];
+
+    const { startDate, endDate } = getDateRange(timeframe);
+    let q;
+    const transactionsRef = collection(db, `users/${userId}/transactions`);
+
+    if (startDate && endDate) {
+        q = query(
+            transactionsRef,
+            where('date', '>=', startDate),
+            where('date', '<=', endDate),
+            orderBy('date', 'asc') // Order by date for time-series charts
+        );
+    } else { // All time
+        q = query(transactionsRef, orderBy('date', 'asc'));
+    }
+
+    try {
+        const querySnapshot = await getDocs(q);
+        const transactions = [];
+        querySnapshot.forEach((doc) => {
+            transactions.push({ id: doc.id, ...doc.data() });
+        });
+        return transactions;
+    } catch (error) {
+        console.error("Error fetching transactions for reports:", error);
+        displayReportMessage("حدث خطأ أثناء جلب البيانات للتقارير.", true);
+        return [];
+    }
+};
+
+// Function to prepare data and render Expense Category Chart (Pie Chart)
+const renderExpenseCategoryChart = (transactions) => {
+    if (expenseCategoryChartInstance) {
+        expenseCategoryChartInstance.destroy(); // Destroy previous chart instance
+    }
+    expenseChartMessage.textContent = ''; // Clear previous messages
+
+    const expenseData = {};
+    transactions.filter(t => t.type === 'expense').forEach(expense => {
+        const category = expense.category || 'غير مصنفة';
+        expenseData[category] = (expenseData[category] || 0) + expense.amount;
+    });
+
+    const labels = Object.keys(expenseData);
+    const data = Object.values(expenseData);
+
+    if (labels.length === 0) {
+        expenseChartMessage.textContent = 'لا توجد بيانات مصروفات لعرضها في هذه الفترة.';
+        expenseCategoryChartCanvas.style.display = 'none'; // Hide canvas
+        return;
+    }
+    expenseCategoryChartCanvas.style.display = 'block'; // Show canvas
+
+    expenseCategoryChartInstance = new Chart(expenseCategoryChartCanvas, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#00CD9B', '#6A5ACD', '#DC143C', '#20B2AA'
+                ],
+                hoverBackgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                    '#FF9F40', '#00CD9B', '#6A5ACD', '#DC143C', '#20B2AA'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false,
+                    text: 'ملخص المصروفات حسب الفئة'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed !== null) {
+                                label += new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'JOD' }).format(context.parsed);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+};
+
+// Function to prepare data and render Income vs Expense Chart (Line Chart)
+const renderIncomeVsExpenseChart = (transactions) => {
+    if (incomeVsExpenseChartInstance) {
+        incomeVsExpenseChartInstance.destroy(); // Destroy previous chart instance
+    }
+    incomeExpenseChartMessage.textContent = ''; // Clear previous messages
+
+    const dates = {}; // { 'YYYY-MM-DD': { income: X, expense: Y } }
+    transactions.forEach(t => {
+        const date = t.date; // Date is already in YYYY-MM-DD
+        if (!dates[date]) {
+            dates[date] = { income: 0, expense: 0 };
+        }
+        if (t.type === 'income') {
+            dates[date].income += t.amount;
+        } else {
+            dates[date].expense += t.amount;
+        }
+    });
+
+    const sortedDates = Object.keys(dates).sort();
+    const incomeData = sortedDates.map(date => dates[date].income);
+    const expenseData = sortedDates.map(date => dates[date].expense);
+
+    if (sortedDates.length === 0) {
+        incomeExpenseChartMessage.textContent = 'لا توجد بيانات دخل أو مصروفات لعرضها في هذه الفترة.';
+        incomeVsExpenseChartCanvas.style.display = 'none'; // Hide canvas
+        return;
+    }
+    incomeVsExpenseChartCanvas.style.display = 'block'; // Show canvas
+
+    incomeVsExpenseChartInstance = new Chart(incomeVsExpenseChartCanvas, {
+        type: 'line',
+        data: {
+            labels: sortedDates, // Dates as labels
+            datasets: [
+                {
+                    label: 'الدخل',
+                    data: incomeData,
+                    borderColor: '#28a745', // Green
+                    backgroundColor: 'rgba(40, 167, 69, 0.2)',
+                    fill: true,
+                    tension: 0.1
+                },
+                {
+                    label: 'المصروفات',
+                    data: expenseData,
+                    borderColor: '#dc3545', // Red
+                    backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                    fill: true,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false,
+                    text: 'الدخل مقابل المصروفات بمرور الوقت'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'JOD' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'category', // Use 'category' for date strings
+                    title: {
+                        display: true,
+                        text: 'التاريخ'
+                    },
+                    ticks: {
+                        // Display fewer ticks if too many dates
+                        autoSkip: true,
+                        maxTicksLimit: 10
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'المبلغ (JOD)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'JOD' }).format(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+};
+
+// Function to fetch budgets and calculate spent amounts for budget tracking chart
+const getBudgetTrackingData = async (userId, timeframe) => {
+    if (!userId || userId === "guest_user_demo") return { labels: [], datasets: [] };
+
+    const { startDate, endDate } = getDateRange(timeframe);
+    let startMonth = null;
+    let endMonth = null;
+
+    if (startDate && endDate) {
+        startMonth = startDate.substring(0, 7); // YYYY-MM
+        endMonth = endDate.substring(0, 7);     // YYYY-MM
+    } else { // All time, we will only consider active budgets or budgets with data
+        // For "all time" budget tracking, it's more complex. We'll show budgets for the current or last month by default.
+        // For simplicity, we'll fetch budgets from the last 12 months or current active ones.
+        // This part might need further refinement for a true "all time" budget view.
+        startMonth = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0'); // Current month
+        endMonth = startMonth; // Just current month
+    }
+    
+    const allBudgets = await getBudgets(userId); // Use existing function
+
+    // Filter budgets relevant to the selected timeframe
+    let filteredBudgets = allBudgets.filter(budget => {
+        // If timeframe is 'all_time', we might show all, or limit to recent (e.g., current year)
+        // For this example, we'll stick to a relevant monthly range.
+        if (!startDate || !endDate) return true; // Show all if no date filter
+
+        const budgetYearMonth = budget.month; // YYYY-MM
+        return budgetYearMonth >= startMonth && budgetYearMonth <= endMonth;
+    });
+
+    // Ensure uniqueness for categories across months if multiple months are selected
+    // For simplicity of this budget chart, we'll aggregate for each category,
+    // and if a category has multiple budgets in the period, we'll sum them or take the latest.
+    // Here, we take the latest budget for each category if multiples exist within the timeframe.
+    const uniqueBudgets = {};
+    filteredBudgets.forEach(budget => {
+        if (!uniqueBudgets[budget.category] || uniqueBudgets[budget.category].month < budget.month) {
+            uniqueBudgets[budget.category] = budget;
+        }
+    });
+    filteredBudgets = Object.values(uniqueBudgets);
+
+
+    const labels = []; // Budget categories
+    const targetAmounts = [];
+    const spentAmounts = [];
+    const remainingAmounts = [];
+
+    for (const budget of filteredBudgets) {
+        const spent = await getSpentAmountForBudget(userId, budget.category, budget.month); // Requires month for accurate spent calculation
+        labels.push(budget.category + ` (${budget.month})`); // Add month to label for clarity
+        targetAmounts.push(budget.targetAmount);
+        spentAmounts.push(spent);
+        remainingAmounts.push(budget.targetAmount - spent);
+    }
+
+    return { labels, targetAmounts, spentAmounts, remainingAmounts };
+};
+
+
+// Function to render Budget Tracking Chart (Bar Chart)
+const renderBudgetTrackingChart = async (userId, timeframe) => {
+    if (budgetTrackingChartInstance) {
+        budgetTrackingChartInstance.destroy(); // Destroy previous chart instance
+    }
+    budgetChartMessage.textContent = ''; // Clear previous messages
+
+    const { labels, targetAmounts, spentAmounts } = await getBudgetTrackingData(userId, timeframe);
+
+    if (labels.length === 0) {
+        budgetChartMessage.textContent = 'لا توجد بيانات ميزانيات لعرضها في هذه الفترة.';
+        budgetTrackingChartCanvas.style.display = 'none'; // Hide canvas
+        return;
+    }
+    budgetTrackingChartCanvas.style.display = 'block'; // Show canvas
+
+    budgetTrackingChartInstance = new Chart(budgetTrackingChartCanvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'المبلغ المستهدف',
+                    data: targetAmounts,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)', // Blue
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'المبلغ المنفق',
+                    data: spentAmounts,
+                    backgroundColor: 'rgba(255, 99, 132, 0.6)', // Red
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                title: {
+                    display: false,
+                    text: 'تتبع الميزانيات'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'JOD' }).format(context.parsed.y);
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'الفئة (الشهر)'
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'المبلغ (JOD)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('ar-EG', { style: 'currency', currency: 'JOD' }).format(value);
+                        }
+                    }
+                }
+            }
+        }
+    });
+};
+
+// Main function to load and render all reports
+const loadReports = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        displayReportMessage("لا يمكن توليد تقارير في وضع الضيف أو بدون تسجيل دخول.", true);
+        expenseChartMessage.textContent = 'لا تتوفر بيانات في وضع الضيف.';
+        incomeExpenseChartMessage.textContent = 'لا تتوفر بيانات في وضع الضيف.';
+        budgetChartMessage.textContent = 'لا تتوفر بيانات في وضع الضيف.';
+        expenseCategoryChartCanvas.style.display = 'none';
+        incomeVsExpenseChartCanvas.style.display = 'none';
+        budgetTrackingChartCanvas.style.display = 'none';
+        return;
+    }
+
+    displayReportMessage("جارٍ توليد التقارير...", false);
+    const timeframe = reportTimeframeSelect.value;
+    const transactions = await getTransactionsForReports(userId, timeframe);
+    
+    renderExpenseCategoryChart(transactions);
+    renderIncomeVsExpenseChart(transactions);
+    await renderBudgetTrackingChart(userId, timeframe); // Await because it fetches budget data
+
+    displayReportMessage("تم توليد التقارير بنجاح!");
+};
+
+
 // ==========================================================
 // 6. Authentication State Listener
 // ==========================================================
@@ -1469,6 +1928,7 @@ onAuthStateChanged(auth, (user) => {
         loadBudgets(user.uid); // Load budgets
         loadGoals(user.uid); // Load financial goals
         loadAssetsAndLiabilities(user.uid); // Load assets and liabilities
+        // Don't auto-load reports here, load them when the "Generate Reports" button is clicked
     } else {
         console.log("User logged out or not logged in.");
         loadDashboardData(null); // Clear dashboard data
@@ -1479,6 +1939,16 @@ onAuthStateChanged(auth, (user) => {
         loadBudgets(null); // Clear budgets
         loadGoals(null); // Clear financial goals
         loadAssetsAndLiabilities(null); // Clear assets and liabilities
+        // Clear reports
+        if (expenseCategoryChartInstance) expenseCategoryChartInstance.destroy();
+        if (incomeVsExpenseChartInstance) incomeVsExpenseChartInstance.destroy();
+        if (budgetTrackingChartInstance) budgetTrackingChartInstance.destroy();
+        expenseChartMessage.textContent = 'لا تتوفر بيانات في وضع الضيف أو بدون تسجيل دخول.';
+        incomeExpenseChartMessage.textContent = 'لا تتوفر بيانات في وضع الضيف.';
+        budgetChartMessage.textContent = 'لا تتوفر بيانات في وضع الضيف.';
+        expenseCategoryChartCanvas.style.display = 'none';
+        incomeVsExpenseChartCanvas.style.display = 'none';
+        budgetTrackingChartCanvas.style.display = 'none';
     }
 });
 
@@ -1570,6 +2040,18 @@ assetsLiabilitiesNav.addEventListener('click', () => {
     showPage('assets-liabilities-section');
     const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
     loadAssetsAndLiabilities(userId); // Reload assets and liabilities
+});
+
+// Reports management
+generateReportsBtn.addEventListener('click', () => {
+    const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
+    loadReports(userId);
+});
+
+reportsNav.addEventListener('click', () => {
+    showPage('reports-section');
+    const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
+    loadReports(userId); // Load reports when navigating to the page
 });
 
 
