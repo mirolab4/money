@@ -457,3 +457,115 @@ table th:last-child, table td:last-child {
     #liabilities-table td:nth-of-type(3):before { content: "تاريخ الإضافة"; }
     #liabilities-table td:nth-of-type(4):before { content: "الإجراءات"; }
 }
+
+/* public/css/style.css (أضف هذا في نهاية الملف) */
+
+/* Reports Section Styles */
+.report-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 25px;
+    align-items: flex-end;
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.report-controls .form-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.report-controls label {
+    font-weight: bold;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.report-controls select,
+.report-controls button {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 1em;
+    width: 100%;
+}
+
+.report-controls button {
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    flex-grow: 0; /* Don't grow button too much */
+}
+
+.report-controls button:hover {
+    background-color: #0056b3;
+}
+
+#report-message {
+    width: 100%;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.charts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px; /* Space between chart cards */
+    justify-content: center;
+}
+
+.chart-card {
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    flex: 1; /* Allow cards to grow */
+    min-width: 380px; /* Minimum width for charts to be readable */
+    max-width: calc(50% - 15px); /* Two charts per row, with gap */
+    box-sizing: border-box; /* Include padding in width */
+    display: flex; /* Flexbox for internal layout */
+    flex-direction: column; /* Stack elements vertically */
+    align-items: center; /* Center horizontally */
+    justify-content: center; /* Center vertically */
+}
+
+.chart-card h3 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+    font-weight: 600;
+}
+
+.chart-card canvas {
+    max-width: 100%;
+    height: auto;
+    max-height: 400px; /* Limit chart height */
+}
+
+.chart-card p {
+    margin-top: 15px;
+    font-size: 0.9em;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 992px) {
+    .chart-card {
+        max-width: 100%; /* One chart per row on smaller screens */
+    }
+}
+
+@media (max-width: 768px) {
+    .report-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .report-controls .form-group,
+    .report-controls button {
+        width: 100%;
+    }
+}
