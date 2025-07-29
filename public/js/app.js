@@ -93,6 +93,31 @@ const addBudgetBtn = document.getElementById('add-budget-btn');
 const budgetMessage = document.getElementById('budget-message');
 const allBudgetsTableBody = document.querySelector('#all-budgets-table tbody');
 
+// Goals Section Elements
+const goalForm = document.getElementById('goal-form');
+const goalNameInput = document.getElementById('goal-name');
+const goalTargetAmountInput = document.getElementById('goal-target-amount');
+const goalSavedAmountInput = document.getElementById('goal-saved-amount');
+const goalDeadlineInput = document.getElementById('goal-deadline');
+const addGoalBtn = document.getElementById('add-goal-btn');
+const goalMessage = document.getElementById('goal-message');
+const allGoalsTableBody = document.querySelector('#all-goals-table tbody');
+
+// Assets and Liabilities Section Elements
+const totalAssetsEl = document.getElementById('total-assets');
+const totalLiabilitiesEl = document.getElementById('total-liabilities');
+const netWorthEl = document.getElementById('net-worth');
+
+const assetLiabilityForm = document.getElementById('asset-liability-form');
+const itemTypeALSelect = document.getElementById('item-type-al');
+const itemNameALInput = document.getElementById('item-name-al');
+const itemValueALInput = document.getElementById('item-value-al');
+const addItemALBtn = document.getElementById('add-item-al-btn');
+const assetLiabilityMessage = document.getElementById('asset-liability-message');
+
+const assetsTableBody = document.querySelector('#assets-table tbody');
+const liabilitiesTableBody = document.querySelector('#liabilities-table tbody');
+
 
 // ==========================================================
 // 2. UI Utility Functions
@@ -186,6 +211,30 @@ const displayBudgetMessage = (message, isError = false) => {
     setTimeout(() => {
         budgetMessage.textContent = '';
         budgetMessage.style.display = 'none';
+    }, 5000);
+};
+
+// Function to display success/error messages for goal form
+const displayGoalMessage = (message, isError = false) => {
+    goalMessage.textContent = message;
+    goalMessage.className = isError ? 'error-message' : 'success-message';
+    goalMessage.style.display = 'block';
+
+    setTimeout(() => {
+        goalMessage.textContent = '';
+        goalMessage.style.display = 'none';
+    }, 5000);
+};
+
+// Function to display success/error messages for asset/liability form
+const displayAssetLiabilityMessage = (message, isError = false) => {
+    assetLiabilityMessage.textContent = message;
+    assetLiabilityMessage.className = isError ? 'error-message' : 'success-message';
+    assetLiabilityMessage.style.display = 'block';
+
+    setTimeout(() => {
+        assetLiabilityMessage.textContent = '';
+        assetLiabilityMessage.style.display = 'none';
     }, 5000);
 };
 
@@ -860,15 +909,20 @@ const getSpentAmountForBudget = async (userId, categoryName, yearMonth) => {
         const [year, month] = yearMonth.split('-'); // month will be 01-12
         const transactionsRef = collection(db, `users/${userId}/transactions`);
         
+        // Construct start and end dates for the month
+        const startDate = `${year}-${month}-01`;
+        // For accurate end date, determine last day of the month
+        const lastDay = new Date(parseInt(year), parseInt(month), 0).getDate();
+        const endDate = `${year}-${month}-${lastDay}`;
+
+
         // Fetch transactions for that category and month
         const q = query(
             transactionsRef,
             where('type', '==', 'expense'),
             where('category', '==', categoryName),
-            // Filter date within the specified month
-            where('date', '>=', `${year}-${month}-01`),
-            where('date', '<=', `${year}-${month}-31`) // This needs improvement for months with 30 days or February
-            // Can use Date objects for more accurate date range filtering
+            where('date', '>=', startDate),
+            where('date', '<=', endDate)
         );
         const querySnapshot = await getDocs(q);
         let spentAmount = 0;
@@ -1016,6 +1070,389 @@ const handleDeleteBudget = async (budgetId) => {
 };
 
 
+// Function to fetch financial goals
+const getGoals = async (userId) => {
+    try {
+        const goalsRef = collection(db, `users/${userId}/goals`);
+        const q = query(goalsRef, orderBy('name')); // Order goals alphabetically by name
+        const querySnapshot = await getDocs(q);
+        const goals = [];
+        querySnapshot.forEach((doc) => {
+            goals.push({ id: doc.id, ...doc.data() });
+        });
+        return goals;
+    } catch (error) {
+        console.error("Error fetching goals:", error);
+        return [];
+    }
+};
+
+// Function to render financial goals in the table
+const renderGoals = (goals) => {
+    allGoalsTableBody.innerHTML = '';
+    if (goals.length === 0) {
+        allGoalsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد أهداف مالية لعرضها.</td></tr>';
+        return;
+    }
+
+    goals.forEach(goal => {
+        const remainingAmount = goal.targetAmount - (goal.savedAmount || 0);
+        const percentage = ((goal.savedAmount || 0) / goal.targetAmount) * 100;
+
+        let progressBarClass = 'red'; // Default to red (not started or far from goal)
+        if (percentage >= 100) {
+            progressBarClass = 'green'; // Goal achieved
+        } else if (percentage >= 50) {
+            progressBarClass = 'yellow'; // More than half achieved
+        } else if (percentage > 0) {
+            progressBarClass = 'yellow'; // Some progress made
+        }
+
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${goal.name}</td>
+            <td>${goal.targetAmount ? goal.targetAmount.toFixed(2) : '0.00'} JOD</td>
+            <td>${(goal.savedAmount || 0).toFixed(2)} JOD</td>
+            <td style="color: ${remainingAmount <= 0 ? '#28a745' : ''};">${remainingAmount.toFixed(2)} JOD</td>
+            <td>
+                <div class="progress-bar-container">
+                    <div class="progress-bar ${progressBarClass}" style="width: ${Math.min(100, percentage)}%;">
+                        ${percentage.toFixed(0)}%
+                    </div>
+                </div>
+            </td>
+            <td>${goal.deadline ? new Date(goal.deadline).toLocaleDateString('ar-EG') : 'لا يوجد'}</td>
+            <td class="action-buttons">
+                <button class="edit-goal-btn" data-id="${goal.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-goal-btn" data-id="${goal.id}"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        allGoalsTableBody.appendChild(row);
+    });
+    // Add event listeners for delete and edit buttons after rows are created
+    document.querySelectorAll('.delete-goal-btn').forEach(button => {
+        button.addEventListener('click', (e) => handleDeleteGoal(e.currentTarget.dataset.id));
+    });
+    // For edit functionality, you would add a similar listener:
+    // document.querySelectorAll('.edit-goal-btn').forEach(button => {
+    //     button.addEventListener('click', (e) => handleEditGoal(e.currentTarget.dataset.id));
+    // });
+    // Currently, `handleEditGoal` function is not implemented
+};
+
+// Main function to load and render financial goals
+const loadGoals = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        allGoalsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center;">لا توجد بيانات متاحة في وضع الضيف أو بدون تسجيل دخول.</td></tr>';
+        return;
+    }
+    const goals = await getGoals(userId);
+    renderGoals(goals);
+};
+
+// Function to add a new financial goal
+const addGoal = async (e) => {
+    e.preventDefault();
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+    if (!userId) {
+        displayGoalMessage("يجب تسجيل الدخول لإضافة هدف.", true);
+        return;
+    }
+    if (userId === "guest_user_demo") {
+        displayGoalMessage("لا يمكن إضافة أهداف في وضع الضيف.", true);
+        return;
+    }
+
+    const name = goalNameInput.value.trim();
+    const targetAmount = parseFloat(goalTargetAmountInput.value);
+    const savedAmount = parseFloat(goalSavedAmountInput.value) || 0; // Default to 0 if not entered
+    const deadline = goalDeadlineInput.value; // YYYY-MM-DD
+
+    if (!name) {
+        displayGoalMessage("اسم الهدف مطلوب.", true);
+        return;
+    }
+    if (isNaN(targetAmount) || targetAmount <= 0) {
+        displayGoalMessage("المبلغ المستهدف غير صالح.", true);
+        return;
+    }
+    if (isNaN(savedAmount) || savedAmount < 0) {
+        displayGoalMessage("المبلغ المدخر حالياً غير صالح.", true);
+        return;
+    }
+    if (savedAmount > targetAmount) {
+        displayGoalMessage("المبلغ المدخر لا يمكن أن يكون أكبر من المبلغ المستهدف.", true);
+        return;
+    }
+
+    try {
+        await addDoc(collection(db, `users/${userId}/goals`), {
+            name: name,
+            targetAmount: targetAmount,
+            savedAmount: savedAmount,
+            deadline: deadline || null, // Save as null if no deadline
+            createdAt: new Date().toISOString()
+        });
+        displayGoalMessage("تمت إضافة الهدف بنSجاح!");
+        goalForm.reset(); // Reset the form
+        loadGoals(userId); // Reload goals table
+        // Reset deadline input if needed, or leave it blank
+        goalDeadlineInput.value = '';
+    } catch (error) {
+        console.error("Error adding goal:", error);
+        displayGoalMessage("فشل في إضافة الهدف: " + error.message, true);
+    }
+};
+
+// Function to delete a financial goal
+const handleDeleteGoal = async (goalId) => {
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+    if (!userId || userId === "guest_user_demo") {
+        displayGoalMessage("لا يمكن حذف أهداف في وضع الضيف أو بدون تسجيل دخول.", true);
+        return;
+    }
+
+    if (confirm("هل أنت متأكد من حذف هذا الهدف؟")) {
+        try {
+            await deleteDoc(doc(db, `users/${userId}/goals`, goalId));
+            displayGoalMessage("تم حذف الهدف بنجاح!");
+            loadGoals(userId); // Update goals table
+        } catch (error) {
+            console.error("Error deleting goal:", error);
+            displayGoalMessage("فشل في حذف الهدف: " + error.message, true);
+        }
+    }
+};
+
+
+// Function to fetch all assets
+const getAssets = async (userId) => {
+    try {
+        const assetsRef = collection(db, `users/${userId}/assets`);
+        const querySnapshot = await getDocs(assetsRef);
+        const assets = [];
+        querySnapshot.forEach((doc) => {
+            assets.push({ id: doc.id, ...doc.data() });
+        });
+        return assets;
+    } catch (error) {
+        console.error("Error fetching assets:", error);
+        return [];
+    }
+};
+
+// Function to fetch all liabilities
+const getLiabilities = async (userId) => {
+    try {
+        const liabilitiesRef = collection(db, `users/${userId}/liabilities`);
+        const querySnapshot = await getDocs(liabilitiesRef);
+        const liabilities = [];
+        querySnapshot.forEach((doc) => {
+            liabilities.push({ id: doc.id, ...doc.data() });
+        });
+        return liabilities;
+    } catch (error) {
+        console.error("Error fetching liabilities:", error);
+        return [];
+    }
+};
+
+// Function to calculate and render total assets, total liabilities, and net worth
+const calculateAndRenderNetWorth = (assets, liabilities) => {
+    let totalAssets = 0;
+    assets.forEach(asset => {
+        totalAssets += asset.value || 0;
+    });
+
+    let totalLiabilities = 0;
+    liabilities.forEach(liability => {
+        totalLiabilities += liability.value || 0;
+    });
+
+    const netWorth = totalAssets - totalLiabilities;
+
+    totalAssetsEl.textContent = `${totalAssets.toFixed(2)} JOD`;
+    totalLiabilitiesEl.textContent = `${totalLiabilities.toFixed(2)} JOD`;
+    netWorthEl.textContent = `${netWorth.toFixed(2)} JOD`;
+
+    // Update net worth color
+    if (netWorth < 0) {
+        netWorthEl.classList.add('negative');
+    } else {
+        netWorthEl.classList.remove('negative');
+    }
+};
+
+// Function to render assets in the assets table
+const renderAssets = (assets) => {
+    assetsTableBody.innerHTML = '';
+    if (assets.length === 0) {
+        assetsTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">لا توجد أصول لعرضها.</td></tr>';
+        return;
+    }
+    assets.forEach(asset => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${asset.name}</td>
+            <td>${asset.value ? asset.value.toFixed(2) : '0.00'} JOD</td>
+            <td>${asset.createdAt ? new Date(asset.createdAt).toLocaleDateString('ar-EG') : 'غير محدد'}</td>
+            <td class="action-buttons">
+                <button class="edit-asset-btn" data-id="${asset.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-asset-btn" data-id="${asset.id}"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        assetsTableBody.appendChild(row);
+    });
+    document.querySelectorAll('.delete-asset-btn').forEach(button => {
+        button.addEventListener('click', (e) => handleDeleteAsset(e.currentTarget.dataset.id));
+    });
+    // For edit functionality, you would add a similar listener:
+    // document.querySelectorAll('.edit-asset-btn').forEach(button => {
+    //     button.addEventListener('click', (e) => handleEditAsset(e.currentTarget.dataset.id));
+    // });
+};
+
+// Function to render liabilities in the liabilities table
+const renderLiabilities = (liabilities) => {
+    liabilitiesTableBody.innerHTML = '';
+    if (liabilities.length === 0) {
+        liabilitiesTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center;">لا توجد خصوم لعرضها.</td></tr>';
+        return;
+    }
+    liabilities.forEach(liability => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${liability.name}</td>
+            <td>${liability.value ? liability.value.toFixed(2) : '0.00'} JOD</td>
+            <td>${liability.createdAt ? new Date(liability.createdAt).toLocaleDateString('ar-EG') : 'غير محدد'}</td>
+            <td class="action-buttons">
+                <button class="edit-liability-btn" data-id="${liability.id}"><i class="fas fa-edit"></i></button>
+                <button class="delete-liability-btn" data-id="${liability.id}"><i class="fas fa-trash-alt"></i></button>
+            </td>
+        `;
+        liabilitiesTableBody.appendChild(row);
+    });
+    document.querySelectorAll('.delete-liability-btn').forEach(button => {
+        button.addEventListener('click', (e) => handleDeleteLiability(e.currentTarget.dataset.id));
+    });
+    // For edit functionality, you would add a similar listener:
+    // document.querySelectorAll('.edit-liability-btn').forEach(button => {
+    //     button.addEventListener('click', (e) => handleEditLiability(e.currentTarget.dataset.id));
+    // });
+};
+
+// Main function to load and render assets and liabilities
+const loadAssetsAndLiabilities = async (userId) => {
+    if (!userId || userId === "guest_user_demo") {
+        totalAssetsEl.textContent = '0.00 JOD';
+        totalLiabilitiesEl.textContent = '0.00 JOD';
+        netWorthEl.textContent = '0.00 JOD';
+        netWorthEl.classList.remove('negative'); // Ensure default color
+        renderAssets([]);
+        renderLiabilities([]);
+        return;
+    }
+
+    const assets = await getAssets(userId);
+    const liabilities = await getLiabilities(userId);
+
+    renderAssets(assets);
+    renderLiabilities(liabilities);
+    calculateAndRenderNetWorth(assets, liabilities);
+};
+
+// Function to add a new asset or liability
+const addAssetOrLiability = async (e) => {
+    e.preventDefault();
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+    if (!userId) {
+        displayAssetLiabilityMessage("يجب تسجيل الدخول لإضافة أصل/خصم.", true);
+        return;
+    }
+    if (userId === "guest_user_demo") {
+        displayAssetLiabilityMessage("لا يمكن إضافة أصول/خصوم في وضع الضيف.", true);
+        return;
+    }
+
+    const type = itemTypeALSelect.value;
+    const name = itemNameALInput.value.trim();
+    const value = parseFloat(itemValueALInput.value);
+
+    if (!name) {
+        displayAssetLiabilityMessage("الاسم/الوصف مطلوب.", true);
+        return;
+    }
+    if (isNaN(value) || value < 0) {
+        displayAssetLiabilityMessage("القيمة الحالية غير صالحة.", true);
+        return;
+    }
+
+    try {
+        let collectionPath;
+        if (type === 'asset') {
+            collectionPath = `users/${userId}/assets`;
+        } else { // liability
+            collectionPath = `users/${userId}/liabilities`;
+        }
+        
+        await addDoc(collection(db, collectionPath), {
+            name: name,
+            value: value,
+            createdAt: new Date().toISOString()
+        });
+        displayAssetLiabilityMessage("تمت الإضافة بنجاح!");
+        assetLiabilityForm.reset();
+        loadAssetsAndLiabilities(userId); // Reload tables and summary
+    } catch (error) {
+        console.error("Error adding asset/liability:", error);
+        displayAssetLiabilityMessage("فشل في الإضافة: " + error.message, true);
+    }
+};
+
+// Function to delete an asset
+const handleDeleteAsset = async (assetId) => {
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+    if (!userId || userId === "guest_user_demo") {
+        displayAssetLiabilityMessage("لا يمكن حذف أصول في وضع الضيف أو بدون تسجيل دخول.", true);
+        return;
+    }
+
+    if (confirm("هل أنت متأكد من حذف هذا الأصل؟")) {
+        try {
+            await deleteDoc(doc(db, `users/${userId}/assets`, assetId));
+            displayAssetLiabilityMessage("تم حذف الأصل بنجاح!");
+            loadAssetsAndLiabilities(userId); // Update tables and summary
+        } catch (error) {
+            console.error("Error deleting asset:", error);
+            displayAssetLiabilityMessage("فشل في حذف الأصل: " + error.message, true);
+        }
+    }
+};
+
+// Function to delete a liability
+const handleDeleteLiability = async (liabilityId) => {
+    const userId = auth.currentUser ? auth.currentUser.uid : null;
+    if (!userId || userId === "guest_user_demo") {
+        displayAssetLiabilityMessage("لا يمكن حذف خصوم في وضع الضيف أو بدون تسجيل دخول.", true);
+        return;
+    }
+
+    if (confirm("هل أنت متأكد من حذف هذا الخصم؟")) {
+        try {
+            await deleteDoc(doc(db, `users/${userId}/liabilities`, liabilityId));
+            displayAssetLiabilityMessage("تم حذف الخصم بنجاح!");
+            loadAssetsAndLiabilities(userId); // Update tables and summary
+        } catch (error) {
+            console.error("Error deleting liability:", error);
+            displayAssetLiabilityMessage("فشل في حذف الخصم: " + error.message, true);
+        }
+    }
+};
+
+
 // ==========================================================
 // 6. Authentication State Listener
 // ==========================================================
@@ -1030,6 +1467,8 @@ onAuthStateChanged(auth, (user) => {
         loadCategoriesAndSources(user.uid); // Load categories and income sources in their management page
         populateBudgetCategorySelect(user.uid); // Load categories in budget form
         loadBudgets(user.uid); // Load budgets
+        loadGoals(user.uid); // Load financial goals
+        loadAssetsAndLiabilities(user.uid); // Load assets and liabilities
     } else {
         console.log("User logged out or not logged in.");
         loadDashboardData(null); // Clear dashboard data
@@ -1038,6 +1477,8 @@ onAuthStateChanged(auth, (user) => {
         loadCategoriesAndSources(null); // Clear categories and income sources in their management page
         populateBudgetCategorySelect(null); // Clear categories in budget form
         loadBudgets(null); // Clear budgets
+        loadGoals(null); // Clear financial goals
+        loadAssetsAndLiabilities(null); // Clear assets and liabilities
     }
 });
 
@@ -1110,6 +1551,27 @@ budgetsNav.addEventListener('click', () => {
     // Set default month to current month when showing the form
     budgetMonthInput.valueAsDate = new Date();
 });
+
+// Goal management form
+goalForm.addEventListener('submit', addGoal);
+
+// Goals navigation button
+goalsNav.addEventListener('click', () => {
+    showPage('goals-section');
+    const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
+    loadGoals(userId); // Reload goals
+});
+
+// Asset and Liability management form
+assetLiabilityForm.addEventListener('submit', addAssetOrLiability);
+
+// Assets & Liabilities navigation button
+assetsLiabilitiesNav.addEventListener('click', () => {
+    showPage('assets-liabilities-section');
+    const userId = auth.currentUser ? auth.currentUser.uid : "guest_user_demo";
+    loadAssetsAndLiabilities(userId); // Reload assets and liabilities
+});
+
 
 // Set default date for transaction form and budget month input on page load
 document.addEventListener('DOMContentLoaded', () => {
